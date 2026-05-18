@@ -1,0 +1,12 @@
+name: karpathy-rules
+version: 1.0.0
+description: Auto-inject Karpathy's LLM coding guidelines into projects
+author: johnosn
+homepage: https://github.com/zljie/johnosn-sdd-script
+license: MIT
+
+# Files to install
+files:
+  - source: karpathy-guidelines.md
+    target: .cursor/rules/karpathy-guidelines.mdc
+    description: Karpathy behavioral guidelines for LLM coding
