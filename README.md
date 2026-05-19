@@ -6,8 +6,9 @@
 
 ### 1. Constitution (核心规范)
 
-`.specify/memory/constitution.md` - 五条核心原则：
+`.specify/memory/constitution.md` - 核心宪章，包含两大纪律：
 
+**纪律一：高效率运维准则**
 | 原则 | 说明 |
 |------|------|
 | **Result-Oriented** | 结果导向，获得关键信息立即汇报 |
@@ -16,6 +17,13 @@
 | **Token Saving** | 上下文精简，超20行日志需筛选 |
 | **Skip COT** | 标准运维跳过复杂思维链 |
 
+**纪律二：Harness 复用规范**
+| 原则 | 说明 |
+|------|------|
+| **Search for Similar** | 编码前必须搜索相似实现并引用 |
+| **Reuse First** | 已有组件优先复用，不得重复造轮子 |
+| **Copy & Adapt** | 新建文件必须复制最相似文件后修改 |
+
 ### 2. 文档模板
 
 | 文件 | 用途 |
@@ -23,7 +31,11 @@
 | `plan.md` | 敏捷迭代面板模板 |
 | `templates/SPEC.md.tmpl` | 系统技术文档模板 |
 
-### 3. 初始化脚本
+### 3. Cursor Agent Rules
+
+`.cursor/rules/harness-reuse.mdc` - Cursor Agent 规则文件，确保 Agent 在每次响应时遵守 Harness 复用原则。与 `/speckit.plan` 和 `/speckit.implement` 阶段无缝集成。
+
+### 4. 初始化脚本
 
 `scripts/bootstrap.sh` - 一键初始化规范
 
@@ -35,8 +47,9 @@
 # 克隆仓库
 git clone https://github.com/zljie/johnosn-sdd-script.git /tmp/sdd-standards
 
-# 复制规范文件
+# 复制规范文件（包含 Cursor 规则）
 cp -r /tmp/sdd-standards/.specify .
+cp -r /tmp/sdd-standards/.cursor .
 cp /tmp/sdd-standards/plan.md .
 cp /tmp/sdd-standards/templates/SPEC.md.tmpl SPEC.md
 ```
