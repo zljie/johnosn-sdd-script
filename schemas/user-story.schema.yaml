@@ -1,0 +1,157 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/user-story.schema.yaml
+title: UserStory
+description: |
+  User Story artifact (US) produced by Product Manager Agent.
+  Each story follows INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable)
+  and is decomposed from a Requirement Artifact (REQ) and grouped into a Product Specification (PS).
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required:
+  - id
+  - title
+  - persona
+  - story
+  - businessValue
+  - priority
+  - acceptanceCriteria
+  - testScenarios
+  - status
+  - traceability
+properties:
+  id:
+    type: string
+    pattern: '^US-[0-9]{3,}$'
+    description: Unique User Story identifier.
+  title:
+    type: string
+    minLength: 1
+    maxLength: 200
+  persona:
+    type: string
+    minLength: 1
+    description: Target user role or persona.
+  story:
+    type: string
+    minLength: 1
+    description: |
+      User story in As a / I want / So that form. Free text but should be parseable.
+  businessValue:
+    type: string
+    minLength: 1
+  priority:
+    type: string
+    enum: [Must, Should, Could, Wont]
+  storyPoints:
+    type: integer
+    minimum: 1
+    maximum: 21
+  dependencies:
+    type: array
+    items:
+      type: string
+      pattern: '^US-[0-9]{3,}$'
+    description: Upstream user stories this one depends on.
+  acceptanceCriteria:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [given, when, then]
+      properties:
+        id:
+          type: string
+          pattern: '^AC-[0-9]{3,}$'
+        given:
+          type: string
+        when:
+          type: string
+        then:
+          type: string
+  productRules:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, rule]
+      properties:
+        id:
+          type: string
+          pattern: '^BR-[0-9]{3,}$'
+        rule:
+          type: string
+  testScenarios:
+    type: object
+    additionalProperties: false
+    required: [positive, negative, boundary, exception]
+    properties:
+      positive:
+        type: array
+        items:
+          $ref: '#/$defs/testScenarioRef'
+      negative:
+        type: array
+        items:
+          $ref: '#/$defs/testScenarioRef'
+      boundary:
+        type: array
+        items:
+          $ref: '#/$defs/testScenarioRef'
+      exception:
+        type: array
+        items:
+          $ref: '#/$defs/testScenarioRef'
+  status:
+    type: string
+    enum: [Draft, Ready, InProgress, Review, Testing, Done]
+  traceability:
+    type: object
+    additionalProperties: false
+    required: [requirementId, productSpecId]
+    properties:
+      requirementId:
+        type: string
+        pattern: '^REQ-[0-9]{3,}$'
+      productSpecId:
+        type: string
+        pattern: '^PS-[0-9]{3,}$'
+      taskIds:
+        type: array
+        items:
+          type: string
+          pattern: '^TASK-[0-9]{3,}$'
+      testCaseIds:
+        type: array
+        items:
+          type: string
+          pattern: '^TC-[0-9]{3,}$'
+  metadata:
+    type: object
+    additionalProperties: false
+    properties:
+      owner:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string
+
+$defs:
+  testScenarioRef:
+    type: object
+    additionalProperties: false
+    required: [description]
+    properties:
+      id:
+        type: string
+        pattern: '^TC-[0-9]{3,}$'
+      description:
+        type: string
+        minLength: 1

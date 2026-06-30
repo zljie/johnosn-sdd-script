@@ -1,0 +1,136 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/quality-evidence-package.schema.yaml
+title: QualityEvidencePackage
+description: Quality Evidence Package (QEP) produced by Tester Agent.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, version, owner, scope, testPeriod, requirementCoverage, storyCoverage, acceptanceCoverage, executionSummary, defectSummary, releaseRecommendation, status]
+properties:
+  id:
+    type: string
+    pattern: '^QEP-[0-9]{3,}$'
+  version:
+    type: string
+  owner:
+    type: string
+  scope:
+    type: string
+  testPeriod:
+    type: object
+    required: [start, end]
+    properties:
+      start:
+        type: string
+        format: date-time
+      end:
+        type: string
+        format: date-time
+  requirementCoverage:
+    type: array
+    items:
+      type: object
+      required: [requirementId, status]
+      properties:
+        requirementId:
+          type: string
+          pattern: '^REQ-[0-9]{3,}$'
+        status:
+          type: string
+          enum: [PASS, FAIL, BLOCKED]
+  storyCoverage:
+    type: array
+    items:
+      type: object
+      required: [storyId, result]
+      properties:
+        storyId:
+          type: string
+          pattern: '^US-[0-9]{3,}$'
+        result:
+          type: string
+          enum: [PASS, FAIL, BLOCKED]
+  acceptanceCoverage:
+    type: array
+    items:
+      type: object
+      required: [acceptanceCriteriaId, testCaseId, status]
+      properties:
+        acceptanceCriteriaId:
+          type: string
+        testCaseId:
+          type: string
+          pattern: '^TC-[0-9]{3,}$'
+        status:
+          type: string
+          enum: [PASS, FAIL, BLOCKED]
+  executionSummary:
+    type: object
+    properties:
+      total:
+        type: integer
+      passed:
+        type: integer
+      failed:
+        type: integer
+      blocked:
+        type: integer
+  defectSummary:
+    type: object
+    properties:
+      critical:
+        type: integer
+      high:
+        type: integer
+      medium:
+        type: integer
+      low:
+        type: integer
+  qualityMetrics:
+    type: object
+    properties:
+      requirementCoverage:
+        type: string
+      storyCoverage:
+        type: string
+      acceptanceCoverage:
+        type: string
+      testPassRate:
+        type: string
+  qualityRisks:
+    type: array
+    items:
+      type: object
+      required: [risk, severity, decision]
+      properties:
+        risk:
+          type: string
+        severity:
+          type: string
+        decision:
+          type: string
+          enum: [Accepted, Deferred, Rejected]
+  releaseRecommendation:
+    type: string
+    enum: [Ready for Review, Review with Risks, Not Ready]
+  status:
+    type: string
+    enum: [Draft, Evidence Collection, Validation, Approved, Delivery Review, Archived]
+  traceability:
+    type: object
+    properties:
+      testReportIds:
+        type: array
+        items:
+          type: string
+          pattern: '^TR-[0-9]{3,}$'
+  metadata:
+    type: object
+    properties:
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time

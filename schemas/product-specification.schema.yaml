@@ -1,0 +1,124 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/product-specification.schema.yaml
+title: ProductSpecification
+description: Product Specification (PS) produced by Product Manager Agent.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, title, requirementId, userStories, status, traceability]
+properties:
+  id:
+    type: string
+    pattern: '^PS-[0-9]{3,}$'
+  title:
+    type: string
+  requirementId:
+    type: string
+    pattern: '^REQ-[0-9]{3,}$'
+  userStories:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [id, title, persona, story, businessValue, acceptanceCriteria, status]
+      properties:
+        id:
+          type: string
+          pattern: '^US-[0-9]{3,}$'
+        title:
+          type: string
+        persona:
+          type: string
+        story:
+          type: string
+        businessValue:
+          type: string
+        priority:
+          type: string
+          enum: [Must, Should, Could, Wont]
+        dependencies:
+          type: array
+          items:
+            type: string
+            pattern: '^US-[0-9]{3,}$'
+        acceptanceCriteria:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [given, when, then]
+            properties:
+              id:
+                type: string
+              given:
+                type: string
+              when:
+                type: string
+              then:
+                type: string
+        productRules:
+          type: array
+          items:
+            type: object
+            required: [id, rule]
+            properties:
+              id:
+                type: string
+                pattern: '^BR-[0-9]{3,}$'
+              rule:
+                type: string
+        testScenarios:
+          type: object
+          required: [positive, negative, boundary, exception]
+          properties:
+            positive:
+              type: array
+              items:
+                type: string
+            negative:
+              type: array
+              items:
+                type: string
+            boundary:
+              type: array
+              items:
+                type: string
+            exception:
+              type: array
+              items:
+                type: string
+        status:
+          type: string
+          enum: [Draft, Ready, InProgress, Review, Testing, Done, Blocked]
+  status:
+    type: string
+    enum: [Draft, Ready, Approved, Implemented, Verified, Released, Archived]
+  traceability:
+    type: object
+    required: [requirementId]
+    properties:
+      requirementId:
+        type: string
+        pattern: '^REQ-[0-9]{3,}$'
+      technicalSpecId:
+        type: string
+        pattern: '^TS-[0-9]{3,}$'
+      taskIds:
+        type: array
+        items:
+          type: string
+          pattern: '^TASK-[0-9]{3,}$'
+  metadata:
+    type: object
+    properties:
+      owner:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string

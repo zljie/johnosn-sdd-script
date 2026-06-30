@@ -1,0 +1,82 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/data-model.schema.yaml
+title: DataModel
+description: Data Model (MODEL) produced by Architecture Agent.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, title, architectureDesignId, entities, status, traceability]
+properties:
+  id:
+    type: string
+    pattern: '^MODEL-[0-9]{3,}$'
+  title:
+    type: string
+  architectureDesignId:
+    type: string
+    pattern: '^AD-[0-9]{3,}$'
+  entities:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required: [name, fields]
+      properties:
+        name:
+          type: string
+        fields:
+          type: array
+          items:
+            type: object
+            required: [name, type]
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+              required:
+                type: boolean
+              unique:
+                type: boolean
+              index:
+                type: boolean
+        relationships:
+          type: array
+          items:
+            type: object
+            required: [to, type]
+            properties:
+              to:
+                type: string
+              type:
+                type: string
+                enum: [one-to-one, one-to-many, many-to-one, many-to-many]
+  status:
+    type: string
+    enum: [Draft, Ready, Approved, Implemented, Verified, Released, Archived]
+  traceability:
+    type: object
+    required: [architectureDesignId]
+    properties:
+      architectureDesignId:
+        type: string
+        pattern: '^AD-[0-9]{3,}$'
+      apiRefs:
+        type: array
+        items:
+          type: string
+          pattern: '^API-[0-9]{3,}$'
+  metadata:
+    type: object
+    properties:
+      owner:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string

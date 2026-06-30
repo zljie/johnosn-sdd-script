@@ -1,0 +1,159 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/task.schema.yaml
+title: Task
+description: |
+  Task artifact (TASK) produced by Technical Manager Agent as part of Technical Specification (TS).
+  Tasks form the Execution Graph — a DAG of independent units of work executed by Developer/QA agents.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required:
+  - id
+  - storyId
+  - title
+  - type
+  - owner
+  - status
+  - estimate
+  - doneCriteria
+  - dependencies
+properties:
+  id:
+    type: string
+    pattern: '^TASK-[0-9]{3,}$'
+  storyId:
+    type: string
+    pattern: '^US-[0-9]{3,}$'
+  title:
+    type: string
+    minLength: 1
+    maxLength: 200
+  type:
+    type: string
+    enum:
+      - Frontend
+      - Backend
+      - Database
+      - API
+      - Integration
+      - Security
+      - Infrastructure
+      - Testing
+      - Documentation
+  owner:
+    type: string
+    description: Agent or team role responsible for execution.
+  description:
+    type: string
+  inputs:
+    type: array
+    description: Artifact IDs consumed by this task.
+    items:
+      type: object
+      additionalProperties: false
+      required: [type, ref]
+      properties:
+        type:
+          type: string
+          enum: [REQ, PS, TS, AD, API, MODEL, TC, US]
+        ref:
+          type: string
+  outputs:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [type, ref]
+      properties:
+        type:
+          type: string
+        ref:
+          type: string
+  dependencies:
+    type: object
+    additionalProperties: false
+    properties:
+      dependsOn:
+        type: array
+        items:
+          type: string
+          pattern: '^TASK-[0-9]{3,}$'
+      blockedBy:
+        type: array
+        items:
+          type: string
+          pattern: '^TASK-[0-9]{3,}$'
+      next:
+        type: array
+        items:
+          type: string
+          pattern: '^TASK-[0-9]{3,}$'
+  estimate:
+    type: object
+    additionalProperties: false
+    required: [storyPoints, complexity]
+    properties:
+      storyPoints:
+        type: integer
+        minimum: 1
+        maximum: 21
+      personDays:
+        type: number
+        minimum: 0
+      complexity:
+        type: string
+        enum: [Low, Medium, High, VeryHigh]
+      priority:
+        type: string
+        enum: [P0, P1, P2, P3]
+  risk:
+    type: object
+    additionalProperties: false
+    properties:
+      level:
+        type: string
+        enum: [Low, Medium, High, Critical]
+      description:
+        type: string
+      mitigation:
+        type: string
+  doneCriteria:
+    type: array
+    minItems: 1
+    items:
+      type: string
+      minLength: 1
+  parallelizable:
+    type: boolean
+    default: false
+  hitlGate:
+    type: boolean
+    default: false
+    description: True if task requires a human-in-the-loop approval gate.
+  status:
+    type: string
+    enum: [Draft, Ready, InProgress, Review, Testing, Done, Blocked]
+  traceability:
+    type: object
+    additionalProperties: false
+    required: [technicalSpecId]
+    properties:
+      technicalSpecId:
+        type: string
+        pattern: '^TS-[0-9]{3,}$'
+      architectureDesignId:
+        type: string
+        pattern: '^AD-[0-9]{3,}$'
+  metadata:
+    type: object
+    additionalProperties: false
+    properties:
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string

@@ -1,0 +1,116 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/software-delivery-package.schema.yaml
+title: SoftwareDeliveryPackage
+description: Software Delivery Package (SDP) produced by Release Flow.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, release, requirementArtifact, productSpecification, technicalSpecification, architectureDesign, implementation, qualityEvidencePackage, deliveryReviewReport, status]
+properties:
+  id:
+    type: string
+    pattern: '^SDP-[0-9]{3,}$'
+  release:
+    type: object
+    required: [version, releaseDate, releaseType]
+    properties:
+      version:
+        type: string
+      releaseDate:
+        type: string
+        format: date-time
+      releaseType:
+        type: string
+        enum: [Major, Minor, Patch, Hotfix]
+      environment:
+        type: string
+      owner:
+        type: string
+  requirementArtifact:
+    type: string
+    pattern: '^REQ-[0-9]{3,}$'
+  productSpecification:
+    type: string
+    pattern: '^PS-[0-9]{3,}$'
+  technicalSpecification:
+    type: string
+    pattern: '^TS-[0-9]{3,}$'
+  architectureDesign:
+    type: string
+    pattern: '^AD-[0-9]{3,}$'
+  apiContracts:
+    type: array
+    items:
+      type: string
+      pattern: '^API-[0-9]{3,}$'
+  dataModels:
+    type: array
+    items:
+      type: string
+      pattern: '^MODEL-[0-9]{3,}$'
+  implementation:
+    type: object
+    properties:
+      frontend:
+        type: array
+        items:
+          type: string
+      backend:
+        type: array
+        items:
+          type: string
+      buildArtifacts:
+        type: array
+        items:
+          type: string
+  qualityEvidencePackage:
+    type: string
+    pattern: '^QEP-[0-9]{3,}$'
+  deliveryReviewReport:
+    type: string
+    pattern: '^DRR-[0-9]{3,}$'
+  releaseNotes:
+    type: string
+  deploymentManifest:
+    type: object
+  rollbackPlan:
+    type: object
+  auditRecords:
+    type: array
+    items:
+      type: string
+  versionMetadata:
+    type: object
+    properties:
+      product:
+        type: string
+      build:
+        type: string
+      api:
+        type: string
+      dataModel:
+        type: string
+      compatibility:
+        type: string
+  status:
+    type: string
+    enum: [Draft, Assembled, Validated, Approved, Released, Operational, Archived]
+  traceability:
+    type: object
+    properties:
+      allArtifacts:
+        type: array
+        items:
+          type: string
+  metadata:
+    type: object
+    properties:
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string

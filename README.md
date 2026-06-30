@@ -1,90 +1,97 @@
-# johnosn-sdd-script
+# Agent SDD — Agent Software Delivery Driven Framework
 
-> johnosn 的 Spec-Driven Development (SDD) 规范库
+> **Version:** 1.0  
+> **Status:** Draft  
+> **Language:** English
 
-## 包含内容
+---
 
-### 1. Constitution (核心规范)
+## Quick Start
 
-`.specify/memory/constitution.md` - 核心宪章，包含两大纪律：
+This is the **Agent Software Delivery Driven (Agent SDD)** framework specification repository.
 
-**纪律一：高效率运维准则**
-| 原则 | 说明 |
-|------|------|
-| **Result-Oriented** | 结果导向，获得关键信息立即汇报 |
-| **No Busy-Wait** | 禁止无效轮询，15秒无进展请求人工介入 |
-| **Read Before Act** | 调研先行，禁止盲目操作 |
-| **Token Saving** | 上下文精简，超20行日志需筛选 |
-| **Skip COT** | 标准运维跳过复杂思维链 |
+To navigate the specs:
 
-**纪律二：Harness 复用规范**
-| 原则 | 说明 |
-|------|------|
-| **Search for Similar** | 编码前必须搜索相似实现并引用 |
-| **Reuse First** | 已有组件优先复用，不得重复造轮子 |
-| **Copy & Adapt** | 新建文件必须复制最相似文件后修改 |
+1. Read `AGENTS.MD` for the canonical framework definition.
+2. See `INDEX.md` for the complete 3-tier manifest of all specs, schemas, and templates.
+3. Start at `loop/01-requirement.md` to understand the 4-stage Software Delivery Loop.
 
-### 2. 文档模板
+## What is Agent SDD?
 
-| 文件 | 用途 |
-|------|------|
-| `plan.md` | 敏捷迭代面板模板 |
-| `templates/SPEC.md.tmpl` | 系统技术文档模板 |
+Agent SDD is an AI-native software delivery framework. Instead of treating AI as a code generation tool, Agent SDD treats AI as a collaborative software engineering organization composed of specialized agents.
 
-### 3. Cursor Agent Rules
+### Core Principles
 
-`.cursor/rules/harness-reuse.mdc` - Cursor Agent 规则文件，确保 Agent 在每次响应时遵守 Harness 复用原则。与 `/speckit.plan` 和 `/speckit.implement` 阶段无缝集成。
+1. **Single Responsibility** — Each agent owns exactly one responsibility.
+2. **Artifact First** — Agents communicate only through standardized artifacts.
+3. **Traceability First** — Every engineering activity is traceable.
+4. **Quality by Design** — Quality is built into every stage.
+5. **Human-in-the-Loop (HITL)** — Humans make final decisions.
+6. **Feedback Driven** — Feedback creates new engineering cycles.
 
-### 4. 初始化脚本
+## 4-Stage Software Delivery Loop
 
-`scripts/bootstrap.sh` - 一键初始化规范
-
-## 快速开始
-
-### 在新项目中引入规范
-
-```bash
-# 克隆仓库
-git clone https://github.com/zljie/johnosn-sdd-script.git /tmp/sdd-standards
-
-# 复制规范文件（包含 Cursor 规则）
-cp -r /tmp/sdd-standards/.specify .
-cp -r /tmp/sdd-standards/.cursor .
-cp /tmp/sdd-standards/plan.md .
-cp /tmp/sdd-standards/templates/SPEC.md.tmpl SPEC.md
+```text
+01-requirement → 02-development → 03-testing → 04-release → (feedback) → 01-requirement
 ```
 
-或使用 bootstrap 脚本：
+See `loop/00-loop.md` for the complete loop definition.
 
-```bash
-curl -sL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/bootstrap.sh | bash
+## Repository Structure
+
+```text
+agent-sdd/
+├── AGENTS.MD              # Canonical framework definition (source of truth)
+├── INDEX.md               # Runtime entry point with 3-tier manifest
+├── loop/                  # 4-stage loop as first-class artifacts
+│   ├── 00-loop.md
+│   ├── 01-requirement.md
+│   ├── 02-development.md
+│   ├── 03-testing.md
+│   └── 04-release.md
+├── agents/                 # 8 agent specifications (3-tier)
+├── workflows/              # 4 workflow specifications (3-tier)
+├── artifacts/              # 11 artifact specifications (3-tier)
+├── schemas/                # 13 JSON Schemas (machine-consumable)
+└── templates/              # 11 template skeletons (for runtime agents)
 ```
 
-## 与 Spec Kit 集成
+See `INDEX.md` for the complete manifest.
 
-与 [github/spec-kit](https://github.com/github/spec-kit) 无缝集成：
+## 3-Tier Progressive Disclosure
 
-```bash
-# 安装 Specify CLI (需要 uv)
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+Every spec file contains three sections:
 
-# 初始化项目
-specify init . --integration cursor-agent
+- `<!-- TIER 1: CORE -->` — Always loaded (~30 lines). Minimal, machine-parseable summary.
+- `<!-- TIER 2: DEEP -->` — Loaded when the loop stage runs. Full responsibilities, contract, lifecycle.
+- `<!-- TIER 3: REF -->` — Loaded only on explicit lookup. Examples, anti-patterns, related specs.
 
-# 使用规范命令
-/speckit.constitution  # 项目原则
-/speckit.specify      # 定义需求
-/speckit.plan         # 技术方案
-/speckit.tasks        # 拆分任务
-/speckit.implement    # 执行实现
+This design minimizes context footprint at runtime while preserving depth when needed.
+
+## Artifact Chain
+
+The complete traceability chain:
+
+```text
+REQ → PS → TS → AD → API/MODEL → TC → TR → QEP → DRR → SDP
 ```
 
-## 规范版本
+See each artifact spec in `artifacts/` for details.
 
-- **Version**: 1.0
-- **Created**: 2026-05-18
-- **Author**: johnosn
+## Runtime Usage
+
+A runtime implementing Agent SDD should:
+
+1. Load `INDEX.md` to discover all specs.
+2. For each loop stage, load only the stage's `loop/0N-*.md` entry file.
+3. Lazy-load agents/workflows/artifacts as needed using their `loop_stage` frontmatter.
+4. Use schemas to validate artifacts at runtime.
+5. Use templates as starting skeletons for artifact generation.
 
 ## License
 
 MIT
+
+---
+
+**Note:** This repository defines engineering standards. It is **not** an implementation repository. Implementation technologies may change; engineering principles remain stable.

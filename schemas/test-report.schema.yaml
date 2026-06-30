@@ -1,0 +1,108 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/test-report.schema.yaml
+title: TestReport
+description: Test Report (TR) produced by Tester Agent.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, executionDate, executedBy, environment, testCases, results, metrics, status]
+properties:
+  id:
+    type: string
+    pattern: '^TR-[0-9]{3,}$'
+  executionDate:
+    type: string
+    format: date-time
+  executedBy:
+    type: string
+  environment:
+    type: string
+    enum: [Development, Integration, UAT, Staging, Production]
+  testCases:
+    type: array
+    items:
+      type: string
+      pattern: '^TC-[0-9]{3,}$'
+  results:
+    type: array
+    items:
+      type: object
+      required: [testCaseId, status, duration]
+      properties:
+        testCaseId:
+          type: string
+          pattern: '^TC-[0-9]{3,}$'
+        status:
+          type: string
+          enum: [PASS, FAIL, BLOCKED, SKIPPED]
+        duration:
+          type: number
+          description: Execution duration in seconds.
+        timestamp:
+          type: string
+          format: date-time
+        executor:
+          type: string
+        comments:
+          type: string
+        evidenceRefs:
+          type: array
+          items:
+            type: string
+  defects:
+    type: array
+    items:
+      type: object
+      required: [id, severity, testCaseId, description]
+      properties:
+        id:
+          type: string
+          pattern: '^BUG-[0-9]{3,}$'
+        severity:
+          type: string
+          enum: [Critical, High, Medium, Low]
+        testCaseId:
+          type: string
+          pattern: '^TC-[0-9]{3,}$'
+        description:
+          type: string
+        status:
+          type: string
+          enum: [Open, In Progress, Fixed, Verified, Closed]
+  metrics:
+    type: object
+    required: [executed, passed, failed, passRate]
+    properties:
+      executed:
+        type: integer
+      passed:
+        type: integer
+      failed:
+        type: integer
+      passRate:
+        type: number
+      averageDuration:
+        type: number
+  status:
+    type: string
+    enum: [Draft, Executing, Completed, Reviewed, Archived]
+  traceability:
+    type: object
+    properties:
+      qualityEvidencePackageId:
+        type: string
+        pattern: '^QEP-[0-9]{3,}$'
+  metadata:
+    type: object
+    properties:
+      owner:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string

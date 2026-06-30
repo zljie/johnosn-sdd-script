@@ -1,0 +1,95 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/architecture-design.schema.yaml
+title: ArchitectureDesign
+description: Architecture Design (AD) produced by Architecture Agent.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required: [id, title, technicalSpecId, components, apiContracts, domainModel, dataModel, status, traceability]
+properties:
+  id:
+    type: string
+    pattern: '^AD-[0-9]{3,}$'
+  title:
+    type: string
+  technicalSpecId:
+    type: string
+    pattern: '^TS-[0-9]{3,}$'
+  components:
+    type: array
+    items:
+      type: string
+  systemContext:
+    type: string
+  componentDiagram:
+    type: string
+  apiContracts:
+    type: array
+    items:
+      type: string
+      pattern: '^API-[0-9]{3,}$'
+  domainModel:
+    type: array
+    items:
+      type: string
+  dataModel:
+    type: array
+    items:
+      type: string
+      pattern: '^MODEL-[0-9]{3,}$'
+  sequenceDiagrams:
+    type: array
+    items:
+      type: string
+  deploymentView:
+    type: string
+  securityDesign:
+    type: object
+  exceptionStrategy:
+    type: object
+  loggingStrategy:
+    type: object
+  adrs:
+    type: array
+    items:
+      type: object
+      required: [id, decision, reason]
+      properties:
+        id:
+          type: string
+        decision:
+          type: string
+        reason:
+          type: string
+        alternatives:
+          type: array
+          items:
+            type: string
+  status:
+    type: string
+    enum: [Draft, Ready, Approved, Implemented, Verified, Released, Archived]
+  traceability:
+    type: object
+    required: [technicalSpecId]
+    properties:
+      technicalSpecId:
+        type: string
+        pattern: '^TS-[0-9]{3,}$'
+      implementationIds:
+        type: array
+        items:
+          type: string
+  metadata:
+    type: object
+    properties:
+      owner:
+        type: string
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+      version:
+        type: string
