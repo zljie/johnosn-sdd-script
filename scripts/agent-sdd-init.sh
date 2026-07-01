@@ -119,9 +119,12 @@ fi
 # Handle both flat structure (files at root) and nested structure (files in agent-sdd/)
 SRC="$TMP_DIR/framework"
 
-# Check if files are in nested agent-sdd/ directory by verifying root is missing key files
-if [ ! -e "$SRC/AGENTS.MD" ] && [ -d "$SRC/agent-sdd" ] && [ -e "$SRC/agent-sdd/AGENTS.MD" ]; then
-    SRC="$TMP_DIR/framework/agent-sdd"
+# Check if files are in nested agent-sdd/ directory
+# Only use nested structure if root is missing key files AND agent-sdd/ contains framework files
+if [ ! -e "$SRC/AGENTS.MD" ] && [ -d "$SRC/agent-sdd" ]; then
+    if [ -e "$SRC/agent-sdd/AGENTS.MD" ] && [ -d "$SRC/agent-sdd/loop" ]; then
+        SRC="$TMP_DIR/framework/agent-sdd"
+    fi
 fi
 
 for required in AGENTS.MD INDEX.md loop agents workflows artifacts schemas templates; do
