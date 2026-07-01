@@ -380,9 +380,21 @@ if [ "$ADD_SPEC_KIT" = true ]; then
 fi
 
 # ----------------------------------------------------------------------------
-# 8. Optional Cursor IDE integration
+# 8. Idempotency sentinel
 # ----------------------------------------------------------------------------
-CURSOR_SCRIPT="./scripts/agent-sdd-cursor-init.sh"
+SENTINEL=".agent-sdd-init-complete"
+if [ -f "$SENTINEL" ] && [ "$FORCE" = false ]; then
+    note "Idempotency sentinel found: $SENTINEL"
+    note "Framework appears already initialized. Use --force to re-run."
+    note "Skipping to optional integrations..."
+else
+    touch "$SENTINEL"
+    ok "Idempotency sentinel written: $SENTINEL"
+fi
+
+# ----------------------------------------------------------------------------
+# 9. Optional Cursor IDE integration
+# ----------------------------------------------------------------------------
 if [ "$ADD_CURSOR" = false ] && [ "$NO_CI" = false ]; then
     echo "==> Optional: Cursor IDE integration"
     if prompt_yes_no "Wire Agent SDD rules into the Cursor IDE (.cursor/rules/)?"; then

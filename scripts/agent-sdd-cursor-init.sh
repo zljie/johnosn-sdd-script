@@ -6,12 +6,17 @@
 # loop stages, schemas, and templates. Optionally integrates SPEC-KIT for
 # artifact schema validation.
 #
+# Idempotent: safe to re-run; use --force to overwrite existing rules.
+#
 # Usage:
-#   ./agent-sdd-cursor-init.sh                     # interactive
-#   ./agent-sdd-cursor-init.sh --force            # non-interactive, overwrite
-#   ./agent-sdd-cursor-init.sh --spec-kit         # also wire SPEC-KIT schema validation
-#   ./agent-sdd-cursor-init.sh --workflows        # also copy workflow rules
-#   ./agent-sdd-cursor-init.sh --dir agent-sdd    # override framework directory
+#   ./agent-sdd-cursor-init.sh                          # interactive
+#   ./agent-sdd-cursor-init.sh --force                 # non-interactive, overwrite
+#   ./agent-sdd-cursor-init.sh --spec-kit              # also wire SPEC-KIT
+#   ./agent-sdd-cursor-init.sh --workflows             # also copy workflow rules
+#   ./agent-sdd-cursor-init.sh --dir agent-sdd         # override framework directory
+#
+# Pipe usage (e.g. from curl):
+#   curl -sSL .../agent-sdd-cursor-init.sh | bash -s -- --dir agent-sdd --spec-kit
 #
 set -euo pipefail
 
@@ -24,7 +29,7 @@ ADD_SPEC_KIT=false
 ADD_WORKFLOWS=false
 
 usage() {
-    sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'
     exit "${1:-0}"
 }
 
@@ -35,29 +40,24 @@ while [[ $# -gt 0 ]]; do
         --workflows)      ADD_WORKFLOWS=true; shift ;;
         --dir)             FRAMEWORK_DIR="$2"; shift 2 ;;
         --help|-h)        usage 0 ;;
-        *)                 echo "[WARN] Unknown flag: $1"; shift ;;
+        *)                 printf "[WARN] Unknown flag: %s\n" "$1"; shift ;;
     esac
 done
 
-# Cross-platform sed in-place
+# ----------------------------------------------------------------------------
+# Helpers (defined first so they're available in all code paths)
+# ----------------------------------------------------------------------------
 sedi() {
+    # Cross-platform: GNU sed uses -i directly; BSD/macOS needs -i ''
     if sed --version >/dev/null 2>&1; then
         sed -i "$@"
     else
-        sed -i '' "$@"
+        # BSD sed: first non-option arg is the script, remaining args are files
+        # Use -e to pass the expression separately so we can append -i ''
+        local _arg
+        _arg="$1"; shift
+        sed -i '' "$_arg" "$@"
     fi
-}
-
-prompt_yes_no() {
-    local question="$1"
-    if [ "$FORCE" = true ]; then
-        echo "[AUTO] ${question} -> yes (--force)"
-        return 0
-    fi
-    printf "%s (y/n) " "$question"
-    local ans
-    read -r ans || ans=""
-    [[ "$ans" =~ ^[Yy]$ ]]
 }
 
 ok()    { printf "[OK]   %s\n" "$*"; }
@@ -65,64 +65,27 @@ warn()  { printf "[WARN] %s\n" "$*" >&2; }
 err()   { printf "[ERROR] %s\n" "$*" >&2; }
 
 # ----------------------------------------------------------------------------
-# 1. Pre-flight checks
+# ALL generation functions — must be defined BEFORE the idempotency check
+# because the early-exit path calls them.
 # ----------------------------------------------------------------------------
-echo "==> Agent SDD — Cursor IDE Integration"
-echo "    Framework: $FRAMEWORK_DIR/"
 
-if [ ! -d "$FRAMEWORK_DIR" ]; then
-    err "$FRAMEWORK_DIR/ not found. Run agent-sdd-init.sh first."
-    exit 1
-fi
-
-REQUIRED_DIRS="agents loop schemas templates"
-for d in $REQUIRED_DIRS; do
-    if [ ! -d "$FRAMEWORK_DIR/$d" ]; then
-        err "$FRAMEWORK_DIR/$d/ missing. Is $FRAMEWORK_DIR a valid Agent SDD root?"
-        exit 1
+# Wire a new rule into AGENTS.mdc if not already present.
+wire_into_agents_mdc() {
+    local rule="$1"
+    if grep -qF "@ $rule" "$RULES_DIR/AGENTS.mdc" 2>/dev/null; then
+        return
     fi
-done
-ok "Framework verified."
+    # awk is more portable than BSD sed's 'a' command
+    awk -v _rule="@ $rule" '
+        /^@ agent-sdd-loop-stages.mdc$/ { print; print _rule; next }
+        { print }
+    ' "$RULES_DIR/AGENTS.mdc" > "$RULES_DIR/AGENTS.mdc.tmp" \
+    && mv "$RULES_DIR/AGENTS.mdc.tmp" "$RULES_DIR/AGENTS.mdc"
+}
 
-# ----------------------------------------------------------------------------
-# 2. Detect which rules already exist and prompt to overwrite
-# ----------------------------------------------------------------------------
-RULES_DIR=".cursor/rules"
-if [ -d "$RULES_DIR" ]; then
-    EXISTING=$(find "$RULES_DIR" -name "*.mdc" -o -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
-    if [ "$EXISTING" -gt 0 ] && [ "$FORCE" = false ]; then
-        warn "$RULES_DIR/ already has $EXISTING rule file(s)."
-        prompt_yes_no "Backup and overwrite?" || { echo "Aborted."; exit 0; }
-        BACKUP="${RULES_DIR}.backup.$(date +%s)"
-        mv "$RULES_DIR" "$BACKUP"
-        ok "Backed up to $BACKUP"
-    elif [ "$FORCE" = true ]; then
-        BACKUP="${RULES_DIR}.backup.$(date +%s)"
-        mv "$RULES_DIR" "$BACKUP" 2>/dev/null || true
-    fi
-fi
-
-mkdir -p "$RULES_DIR"
-
-# ----------------------------------------------------------------------------
-# 3. Prompt for optional integrations
-# ----------------------------------------------------------------------------
-if [ "$ADD_SPEC_KIT" = false ] && prompt_yes_no "Also wire SPEC-KIT for schema validation?"; then
-    ADD_SPEC_KIT=true
-fi
-
-if [ "$ADD_WORKFLOWS" = false ] && prompt_yes_no "Also copy workflow rules?"; then
-    ADD_WORKFLOWS=true
-fi
-
-# ----------------------------------------------------------------------------
-# 4. Generate rules
-# ----------------------------------------------------------------------------
-
-# -- 4a. Main entry rule: AGENTS.mdc ----------------------------------------
-echo "==> Generating Cursor rules..."
-
-cat > "$RULES_DIR/AGENTS.mdc" <<'RULES'
+# -- Generate AGENTS.mdc (entry point) ----------------------------------------
+generate_agents_mdc() {
+    cat > "$RULES_DIR/AGENTS.mdc" <<'AGENTS_MDC'
 ---
 description: Agent SDD — Software Delivery Framework
 version: 1.0
@@ -133,11 +96,16 @@ version: 1.0
 @ agent-sdd-lifecycle.mdc
 @ agent-sdd-agents.mdc
 @ agent-sdd-loop-stages.mdc
-RULES
-ok "AGENTS.mdc (entry point)"
+AGENTS_MDC
+}
 
-# -- 4b. Framework overview rule --------------------------------------------
-cat > "$RULES_DIR/agent-sdd-overview.mdc" <<RULES
+# -- Generate agent-sdd-overview.mdc -----------------------------------------
+# All dynamic values (FRAMEWORK_DIR) are pre-computed into local variables
+# BEFORE the heredoc so that the quoted-delimiter heredoc stays safe when
+# the script is run via:  curl ... | bash -s -- --dir agent-sdd
+generate_overview_rule() {
+    local _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-overview.mdc" <<OVERVIEW_MDC
 ---
 description: Agent SDD Framework Overview — what the framework is and how it works
 version: 1.0
@@ -175,13 +143,13 @@ Instead of compressing all engineering responsibilities into a single model, Age
 
 ## Artifact Lifecycle
 
-```
+\`\`\`
 Draft → Ready → Approved → In Progress → Completed → Verified → Released → Archived
-```
+\`\`\`
 
 ## Framework Root
 
-The framework lives in \`$FRAMEWORK_DIR/\` (default: \`agent-sdd/\`).
+The framework lives in \`$_dir/\` (default: \`agent-sdd/\`).
 
 - \`AGENTS.MD\` — Full framework specification
 - \`INDEX.md\` — Framework index
@@ -198,13 +166,15 @@ The framework lives in \`$FRAMEWORK_DIR/\` (default: \`agent-sdd/\`).
 2. Every artifact must have a unique ID, owner, version, and status.
 3. Never modify another agent's artifacts directly — use feedback instead.
 4. Before writing any code, ensure the relevant artifact is in **Approved** status.
-5. Use templates from \`$FRAMEWORK_DIR/templates/\` when creating new artifacts.
-6. Validate artifacts against schemas in \`$FRAMEWORK_DIR/schemas/\`.
-RULES
-ok "agent-sdd-overview.mdc"
+5. Use templates from \`$_dir/templates/\` when creating new artifacts.
+6. Validate artifacts against schemas in \`$_dir/schemas/\`.
+OVERVIEW_MDC
+}
 
-# -- 4c. Artifacts rule -------------------------------------------------------
-cat > "$RULES_DIR/agent-sdd-artifacts.mdc" <<RULES
+# -- Generate agent-sdd-artifacts.mdc -----------------------------------------
+generate_artifacts_rule() {
+    local _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-artifacts.mdc" <<ARTIFACTS_MDC
 ---
 description: Agent SDD Artifact system — types, schemas, and templates
 version: 1.0
@@ -260,45 +230,11 @@ metadata:
 
 ## Templates
 
-Use the matching template from \`$FRAMEWORK_DIR/templates/\` when creating new artifacts:
-
-\`\`\`
-$FRAMEWORK_DIR/templates/
-├── requirement.md
-├── product-specification.md
-├── technical-specification.md
-├── architecture-design.md
-├── user-story.md
-├── task.md
-├── test-case.md
-├── test-report.md
-├── quality-evidence-package.md
-├── delivery-review-report.md
-├── software-delivery-package.md
-└── ...
-\`\`\`
+Use the matching template from \`$_dir/templates/\` when creating new artifacts.
 
 ## Schemas
 
-Validate artifacts against the JSON Schema in \`$FRAMEWORK_DIR/schemas/\`:
-
-\`\`\`
-$FRAMEWORK_DIR/schemas/
-├── requirement.schema.yaml
-├── product-specification.schema.yaml
-├── technical-specification.schema.yaml
-├── architecture-design.schema.yaml
-├── user-story.schema.yaml
-├── task.schema.yaml
-├── test-case.schema.yaml
-├── test-report.schema.yaml
-├── quality-evidence-package.schema.yaml
-├── delivery-review-report.schema.yaml
-├── software-delivery-package.schema.yaml
-├── data-model.schema.yaml
-├── api.schema.yaml
-└── ...
-\`\`\`
+Validate artifacts against the JSON Schema in \`$_dir/schemas/\`.
 
 ## Artifact File Naming
 
@@ -308,11 +244,13 @@ Examples:
 - \`REQ-001-user-authentication.md\`
 - \`PS-001-ecommerce-product.md\`
 - \`TS-003-payment-service.md\`
-RULES
-ok "agent-sdd-artifacts.mdc"
+ARTIFACTS_MDC
+}
 
-# -- 4d. Lifecycle rule -------------------------------------------------------
-cat > "$RULES_DIR/agent-sdd-lifecycle.mdc" <<RULES
+# -- Generate agent-sdd-lifecycle.mdc -----------------------------------------
+generate_lifecycle_rule() {
+    local _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-lifecycle.mdc" <<LIFECYCLE_MDC
 ---
 description: Agent SDD Lifecycle — loop stages, state machines, and quality gates
 version: 1.0
@@ -355,7 +293,7 @@ The framework operates as a continuous loop of five stages:
 
 ## Loop Stage Definitions
 
-Each stage is defined in \`$FRAMEWORK_DIR/loop/\`:
+Each stage is defined in \`$_dir/loop/\`:
 
 - \`01-requirement.md\` — Requirement discovery and capture
 - \`02-development.md\` — Planning, architecture, and implementation
@@ -418,33 +356,45 @@ Created → Assigned → Accepted → Resolved → Verified → Closed
 \`\`\`
 
 Feedback never modifies an existing artifact directly — it creates new work.
-RULES
-ok "agent-sdd-lifecycle.mdc"
-
-# -- 4e. Agents rule ---------------------------------------------------------
-# Build the agents section dynamically from $FRAMEWORK_DIR/agents/*.md
-AGENTS_LIST=$(find "$FRAMEWORK_DIR/agents" -name "*.md" -type f 2>/dev/null | sort)
-
-# Extract name + description from each agent file
-build_agent_entry() {
-    local file="$1"
-    local name
-    name=$(basename "$file" .md | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1))tolower(substr($i,2)); print}')
-    local desc=""
-    if grep -A2 "^## CORE" "$file" >/dev/null 2>&1; then
-        desc=$(sed -n '/^## CORE/,/^##/p' "$file" | grep -i "description" | head -1 | sed 's/^[ ]*//' | cut -d: -f2- | xargs)
-    fi
-    echo "**$name**"
-    if [ -n "$desc" ]; then echo "  $desc"; fi
-    echo ""
+LIFECYCLE_MDC
 }
 
-AGENTS_CONTENT=""
-for agent_file in $AGENTS_LIST; do
-    AGENTS_CONTENT="${AGENTS_CONTENT}$(build_agent_entry "$agent_file")"
-done
+# -- Generate agent-sdd-agents.mdc -------------------------------------------
+# Dynamically builds the agent roster from $FRAMEWORK_DIR/agents/.
+build_agents_section() {
+    local _list
+    _list=$(find "$FRAMEWORK_DIR/agents" -name "*.md" -type f 2>/dev/null | sort) || true
+    [ -z "$_list" ] && echo "*(no agent definitions found)*" && return
+    while IFS= read -r _f; do
+        [ -z "$_f" ] && continue
+        local _name _desc
+        _name=$(basename "$_f" .md | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1))tolower(substr($i,2)); print}')
+        _desc=""
+        if grep -A2 "^## CORE" "$_f" >/dev/null 2>&1; then
+            _desc=$(sed -n '/^## CORE/,/^##/p' "$_f" | grep -i "description" | head -1 | sed 's/^[ ]*//' | cut -d: -f2- | xargs)
+        fi
+        printf "%s\n" "**$_name**"
+        [ -n "$_desc" ] && printf "%s\n" "  $_desc"
+        printf "\n"
+    done <<< "$_list"
+}
 
-cat > "$RULES_DIR/agent-sdd-agents.mdc" <<RULES
+build_agents_detail_list() {
+    local _list
+    _list=$(find "$FRAMEWORK_DIR/agents" -name "*.md" -type f 2>/dev/null | sort) || true
+    [ -z "$_list" ] && echo "  *(not found)*" && return
+    while IFS= read -r _f; do
+        [ -z "$_f" ] && continue
+        echo "- \`$(basename "$_f")\`"
+    done <<< "$_list"
+}
+
+generate_agents_rule() {
+    local _content _detail_list _dir
+    _content=$(build_agents_section)
+    _detail_list=$(build_agents_detail_list)
+    _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-agents.mdc" <<AGENTS_RULES
 ---
 description: Agent SDD Agents — roles, responsibilities, and interaction patterns
 version: 1.0
@@ -456,7 +406,7 @@ Each agent represents a professional engineering role with clearly defined respo
 
 ## Agent Roster
 
-${AGENTS_CONTENT:-*(no agent definitions found in $FRAMEWORK_DIR/agents/)*}
+${_content:-*(no agent definitions found)*}
 
 ## Agent Communication Model
 
@@ -520,31 +470,58 @@ agent:
 
 When working as or with an Agent SDD agent:
 
-1. **Read** the relevant artifact from \`$FRAMEWORK_DIR/artifacts/\`
+1. **Read** the relevant artifact from \`$_dir/artifacts/\`
 2. **Validate** it is in the correct lifecycle state
 3. **Produce** the next artifact in the chain
-4. **Write** the artifact to \`$FRAMEWORK_DIR/artifacts/\`
+4. **Write** the artifact to \`$_dir/artifacts/\`
 5. **Do not** modify another agent's output directly
 
 ## Agent Detail Files
 
-Each agent's full definition lives in \`$FRAMEWORK_DIR/agents/\`:
+Each agent's full definition lives in \`$_dir/agents/\`:
 
-$(for f in $AGENTS_LIST; do echo "- \`$(basename $f)\`"; done 2>/dev/null || echo "  *(not found)*")
-RULES
-ok "agent-sdd-agents.mdc"
+$(printf "%s\n" "$_detail_list")
+AGENTS_RULES
+}
 
-# -- 4f. Loop stages rule ----------------------------------------------------
-STAGES_LIST=$(find "$FRAMEWORK_DIR/loop" -name "*.md" -type f 2>/dev/null | sort)
+# -- Generate agent-sdd-loop-stages.mdc ---------------------------------------
+build_stages_overview() {
+    local _list
+    _list=$(find "$FRAMEWORK_DIR/loop" -name "*.md" -type f 2>/dev/null | sort) || true
+    [ -z "$_list" ] && echo "*(no loop stages found)*" && return
+    while IFS= read -r _f; do
+        [ -z "$_f" ] && continue
+        local _name _title
+        _name=$(basename "$_f" .md)
+        _title=$(sed -n "s/^# \+//p" "$_f" | head -1 || echo "$_name")
+        printf "%s\n" "- **${_name}** — ${_title}"
+    done <<< "$_list"
+}
 
-STAGES_CONTENT=""
-for stage_file in $STAGES_LIST; do
-    stage_name=$(basename "$stage_file" .md)
-    stage_title=$(sed -n "s/^# \+//p" "$stage_file" | head -1 || echo "$stage_name")
-    STAGES_CONTENT="${STAGES_CONTENT}- **${stage_name}** — ${stage_title}\n"
-done
+build_stages_details() {
+    local _list
+    _list=$(find "$FRAMEWORK_DIR/loop" -name "*.md" -type f 2>/dev/null | sort) || true
+    [ -z "$_list" ] && echo "*(no stage files found)*" && return
+    while IFS= read -r _f; do
+        [ -z "$_f" ] && continue
+        local _name
+        _name=$(basename "$_f" .md)
+        printf "%s\n" "### $_name"
+        printf "\n"
+        printf "%s\n" "\`\`\`quote"
+        printf "%s\n" "引用自: \`$_f\`"
+        printf "%s\n" "> *(内容摘要 — 完整定义见框架文件)*"
+        printf "%s\n" "\`\`\`"
+        printf "\n"
+    done <<< "$_list"
+}
 
-cat > "$RULES_DIR/agent-sdd-loop-stages.mdc" <<RULES
+generate_loop_stages_rule() {
+    local _overview _details _dir
+    _overview=$(build_stages_overview)
+    _details=$(build_stages_details)
+    _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-loop-stages.mdc" <<STAGES_RULES
 ---
 description: Agent SDD Loop Stages — the five stages of the Software Delivery Loop
 version: 1.0
@@ -552,23 +529,15 @@ version: 1.0
 
 # Agent SDD Loop Stages
 
-The Software Delivery Loop consists of five stages. Each stage is defined in \`$FRAMEWORK_DIR/loop/\`.
+The Software Delivery Loop consists of five stages. Each stage is defined in \`$_dir/loop/\`.
 
 ## Stage Overview
 
-${STAGES_CONTENT:-*(no loop stages found in $FRAMEWORK_DIR/loop/)*}
+$(printf "%s\n" "$_overview")
 
 ## Stage Details
 
-$(for f in $STAGES_LIST; do
-    stage_name=$(basename "$f" .md)
-    echo "### $stage_name"
-    echo ""
-    echo '```'引用自: `'"$f"'`'
-    echo '> *(内容摘要 — 完整定义见框架文件)*'
-    echo '```'
-    echo ""
-done 2>/dev/null || echo "*(no stage files found)*")
+$(printf "%s\n" "$_details")
 
 ## Stage Relationships
 
@@ -595,12 +564,13 @@ done 2>/dev/null || echo "*(no stage files found)*")
   ↓
   (back to 01-requirement)
 \`\`\`
-RULES
-ok "agent-sdd-loop-stages.mdc"
+STAGES_RULES
+}
 
-# -- 4g. SPEC-KIT schema validation rule (optional) -------------------------
-if [ "$ADD_SPEC_KIT" = true ]; then
-    cat > "$RULES_DIR/agent-sdd-spec-kit.mdc" <<RULES
+# -- Generate SPEC-KIT rule (optional) ----------------------------------------
+generate_spec_kit_rule() {
+    local _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-spec-kit.mdc" <<SPEC_KIT_MDC
 ---
 description: Agent SDD SPEC-KIT integration — schema validation for all artifact types
 version: 1.0
@@ -610,12 +580,12 @@ version: 1.0
 
 SPEC-KIT validates Agent SDD artifacts against their JSON Schema contracts. This rule wires SPEC-KIT into the Cursor IDE.
 
-## SPEC-KIT Setup
+## Schema Files
 
-SPEC-KIT was initialized with the \`agent-sdd\` integration. Schema files are located at:
+Schema files are located at:
 
 \`\`\`
-$FRAMEWORK_DIR/schemas/
+$_dir/schemas/
 \`\`\`
 
 ## Schema Coverage
@@ -638,7 +608,7 @@ $FRAMEWORK_DIR/schemas/
 
 ## Validation Workflow
 
-1. Write or edit an artifact in \`$FRAMEWORK_DIR/artifacts/\`
+1. Write or edit an artifact in \`$_dir/artifacts/\`
 2. Run \`specify validate\` to check against the matching schema
 3. Fix any validation errors before committing
 4. The CI workflow (\`.github/workflows/agent-sdd-validate.yml\`) runs validation on push
@@ -662,22 +632,25 @@ Each schema follows semantic versioning. When updating a schema:
 1. Increment the minor version if backward-compatible
 2. Increment the major version if breaking
 3. Update all affected artifacts to the new schema version
-RULES
-    ok "agent-sdd-spec-kit.mdc (SPEC-KIT integration)"
+SPEC_KIT_MDC
+}
 
-    # Wire SPEC-KIT into the main AGENTS.mdc
-    if grep -q "@ agent-sdd-spec-kit.mdc" "$RULES_DIR/AGENTS.mdc" 2>/dev/null; then
-        : # already included
-    else
-        sedi '/^@ agent-sdd-loop-stages.mdc$/a @ agent-sdd-spec-kit.mdc' "$RULES_DIR/AGENTS.mdc"
-    fi
-fi
+# -- Generate workflows rule (optional) ----------------------------------------
+build_workflows_list() {
+    local _list
+    _list=$(find "$FRAMEWORK_DIR/workflows" -name "*.md" -type f 2>/dev/null | sort) || true
+    [ -z "$_list" ] && echo "*(no workflows found)*" && return
+    while IFS= read -r _f; do
+        [ -z "$_f" ] && continue
+        printf "%s\n" "- **$(basename "$_f")**"
+    done <<< "$_list"
+}
 
-# -- 4h. Workflow rules (optional) ------------------------------------------
-if [ "$ADD_WORKFLOWS" = true ]; then
-    WORKFLOWS_LIST=$(find "$FRAMEWORK_DIR/workflows" -name "*.md" -type f 2>/dev/null | sort)
-
-    cat > "$RULES_DIR/agent-sdd-workflows.mdc" <<RULES
+generate_workflows_rule() {
+    local _wf_list _dir
+    _wf_list=$(build_workflows_list)
+    _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-workflows.mdc" <<WORKFLOWS_MDC
 ---
 description: Agent SDD Workflows — requirement, development, testing, and release workflows
 version: 1.0
@@ -685,14 +658,11 @@ version: 1.0
 
 # Agent SDD Workflows
 
-Each workflow represents a complete engineering lifecycle. Workflows are defined in \`$FRAMEWORK_DIR/workflows/\`.
+Each workflow represents a complete engineering lifecycle. Workflows are defined in \`$_dir/\`.
 
 ## Workflow Definitions
 
-$(for f in $WORKFLOWS_LIST; do
-    wf_name=$(basename "$f" .md)
-    echo "- **${wf_name}.md**"
-done 2>/dev/null || echo "*(no workflows found)*")
+$(printf "%s\n" "$_wf_list")
 
 ## Requirement Workflow
 
@@ -780,120 +750,200 @@ Production Release
 \`\`\`
 Draft → Ready → Running → Waiting Review → Approved → Completed → Archived
 \`\`\`
-RULES
-    ok "agent-sdd-workflows.mdc (workflow rules)"
+WORKFLOWS_MDC
+}
 
-    # Wire workflows into the main AGENTS.mdc
-    if grep -q "@ agent-sdd-workflows.mdc" "$RULES_DIR/AGENTS.mdc" 2>/dev/null; then
-        :
+# -- Update CURSOR.md ---------------------------------------------------------
+# Pre-computes all dynamic values BEFORE printf so quoted-heredoc is safe.
+update_cursor_md() {
+    local _spec_kit_rule _workflows_rule _dir
+    _spec_kit_rule=""
+    _workflows_rule=""
+    [ "$ADD_SPEC_KIT"   = true ] && _spec_kit_rule="- [agent-sdd-spec-kit.mdc](.cursor/rules/agent-sdd-spec-kit.mdc) — SPEC-KIT schema validation"
+    [ "$ADD_WORKFLOWS" = true ] && _workflows_rule="- [agent-sdd-workflows.mdc](.cursor/rules/agent-sdd-workflows.mdc) — Workflow definitions"
+    _dir="$FRAMEWORK_DIR"
+
+    local _marker="<!-- AGENT_SDD_MARKER -->"
+    if [ -f CURSOR.md ] && grep -qF "$_marker" CURSOR.md 2>/dev/null; then
+        ok "CURSOR.md already has Agent SDD section — skipped (idempotent)."
     else
-        sedi '/^@ agent-sdd-loop-stages.mdc$/a @ agent-sdd-workflows.mdc' "$RULES_DIR/AGENTS.mdc"
+        # Build the section with all variables already expanded
+        {
+            printf '%s\n' "# Agent SDD — Cursor IDE Integration"
+            printf '\n%s\n\n' "$_marker"
+            printf '%s\n' "This project uses the [Agent SDD Framework]($_dir/AGENTS.MD) for AI-driven software delivery."
+            printf '\n%s\n' "## Cursor Rules"
+            printf '\n%s\n' "Rules are located in [\`.cursor/rules/\`](.cursor/rules/) and loaded automatically by Cursor:"
+            printf '%s\n' "- **[AGENTS.mdc](.cursor/rules/AGENTS.mdc)** — Entry point; \`@\`\\-includes all sub-rules"
+            printf '%s\n' "- [agent-sdd-overview.mdc](.cursor/rules/agent-sdd-overview.mdc) — Framework overview"
+            printf '%s\n' "- [agent-sdd-artifacts.mdc](.cursor/rules/agent-sdd-artifacts.mdc) — Artifact types, schemas, templates"
+            printf '%s\n' "- [agent-sdd-lifecycle.mdc](.cursor/rules/agent-sdd-lifecycle.mdc) — Loop stages and state machines"
+            printf '%s\n' "- [agent-sdd-agents.mdc](.cursor/rules/agent-sdd-agents.mdc) — Agent roles and responsibilities"
+            printf '%s\n' "- [agent-sdd-loop-stages.mdc](.cursor/rules/agent-sdd-loop-stages.mdc) — Five loop stage definitions"
+            [ -n "$_workflows_rule" ] && printf '%s\n' "$_workflows_rule"
+            [ -n "$_spec_kit_rule"  ] && printf '%s\n' "$_spec_kit_rule"
+            printf '\n%s\n' "## Framework Structure"
+            printf '\n%s\n' "\`\`\`"
+            printf '%s\n' "$_dir/"
+            printf '%s\n' "├── AGENTS.MD              # Full framework specification"
+            printf '%s\n' "├── INDEX.md               # Framework index"
+            printf '%s\n' "├── agent-sdd.yaml         # Project configuration"
+            printf '%s\n' "├── loop/                  # Loop stage definitions"
+            printf '%s\n' "│   ├── 01-requirement.md"
+            printf '%s\n' "│   ├── 02-development.md"
+            printf '%s\n' "│   ├── 03-testing.md"
+            printf '%s\n' "│   ├── 04-release.md"
+            printf '%s\n' "│   └── 05-feedback.md"
+            printf '%s\n' "├── agents/                # Agent role definitions"
+            printf '%s\n' "├── workflows/             # Workflow specifications"
+            printf '%s\n' "├── artifacts/             # Artifact instances"
+            printf '%s\n' "├── schemas/               # JSON Schema contracts"
+            printf '%s\n' "└── templates/             # Markdown templates"
+            printf '%s\n' "\`\`\`"
+            printf '\n%s\n' "## Quick Start"
+            printf '\n%s\n' "1. **Start a loop**: Open \\\`$_dir/loop/01-requirement.md\\\` and follow the requirement workflow."
+            printf '%s\n' "2. **Create an artifact**: Use a template from \\\`$_dir/templates/\\\`."
+            printf '%s\n' "3. **Traceability**: Every artifact must declare its parent and children in the frontmatter."
+            printf '\n%s\n' "## Commands"
+            printf '\n%s\n' "\`\`\`bash"
+            printf '%s\n' "# Re-initialize Cursor rules (after framework update)"
+            printf '%s\n' "./scripts/agent-sdd-cursor-init.sh --force"
+            printf '\n%s\n' "# Add SPEC-KIT integration"
+            printf '%s\n' "./scripts/agent-sdd-cursor-init.sh --spec-kit"
+            printf '\n%s\n' "# Show all available rules"
+            printf '%s\n' "ls -la .cursor/rules/"
+            printf '%s\n' "\`\`\`"
+        } > CURSOR.md.tmp
+
+        if [ -f CURSOR.md ]; then
+            cat CURSOR.md >> CURSOR.md.tmp
+        fi
+        mv CURSOR.md.tmp CURSOR.md
+        ok "CURSOR.md written."
+    fi
+}
+
+# -- Update agent-sdd.yaml -----------------------------------------------------
+update_agent_yaml() {
+    if [ -f "$FRAMEWORK_DIR/agent-sdd.yaml" ]; then
+        if grep -q "cursor:" "$FRAMEWORK_DIR/agent-sdd.yaml" 2>/dev/null; then
+            sedi "s/cursor: .*/cursor: true/" "$FRAMEWORK_DIR/agent-sdd.yaml"
+        else
+            sedi "/ci_validation:/a\  cursor: true" "$FRAMEWORK_DIR/agent-sdd.yaml"
+        fi
+        ok "Updated $FRAMEWORK_DIR/agent-sdd.yaml → cursor: true"
+    fi
+}
+
+# ----------------------------------------------------------------------------
+# Idempotency sentinel
+#
+# If .cursor/rules/.sdd-cursor-installed exists and --force is NOT set, we are
+# already fully installed.  The script only adds newly requested features
+# (--spec-kit, --workflows) without disturbing existing rules.
+# With --force the sentinel is removed first for a full regeneration.
+# ----------------------------------------------------------------------------
+echo "==> Agent SDD — Cursor IDE Integration"
+echo "    Framework: $FRAMEWORK_DIR/"
+echo "    Mode:      $([ "$FORCE" = true ] && echo "force (overwrite)" || echo "incremental (skip existing)")"
+
+RULES_DIR=".cursor/rules"
+SENTINEL="$RULES_DIR/.sdd-cursor-installed"
+
+if ! [ -d "$FRAMEWORK_DIR" ]; then
+    err "$FRAMEWORK_DIR/ not found. Run agent-sdd-init.sh first."
+    exit 1
+fi
+
+for _d in agents loop schemas templates; do
+    if ! [ -d "$FRAMEWORK_DIR/$_d" ]; then
+        err "$FRAMEWORK_DIR/$_d/ missing. Is $FRAMEWORK_DIR a valid Agent SDD root?"
+        exit 1
+    fi
+done
+ok "Framework verified."
+
+if [ "$FORCE" = true ]; then
+    if [ -f "$SENTINEL" ]; then
+        ok "Removing idempotency sentinel (--force)."
+        rm -f "$SENTINEL"
+    fi
+    if [ -d "$RULES_DIR" ]; then
+        local _backup="${RULES_DIR}.backup.$(date +%s)"
+        mv "$RULES_DIR" "$_backup"
+        ok "Existing rules backed up to $_backup"
     fi
 fi
 
-# ----------------------------------------------------------------------------
-# 5. Create / update CURSOR.md at project root
-# ----------------------------------------------------------------------------
-echo "==> Writing CURSOR.md ..."
+if [ -f "$SENTINEL" ] && [ "$FORCE" = false ]; then
+    echo "==> Idempotent run: $SENTINEL found, skipping already-installed rules."
+    echo "    (use --force to regenerate all rules)"
+    echo
 
-# Detect if SPEC-KIT is installed
-SPEC_KIT_LINE=""
+    if [ "$ADD_SPEC_KIT" = true ] && [ ! -f "$RULES_DIR/agent-sdd-spec-kit.mdc" ]; then
+        echo "==> Adding SPEC-KIT integration (idempotent)..."
+        mkdir -p "$RULES_DIR"
+        generate_spec_kit_rule
+        wire_into_agents_mdc "agent-sdd-spec-kit.mdc"
+        ok "SPEC-KIT rule added."
+    fi
+
+    if [ "$ADD_WORKFLOWS" = true ] && [ ! -f "$RULES_DIR/agent-sdd-workflows.mdc" ]; then
+        echo "==> Adding workflow rules (idempotent)..."
+        mkdir -p "$RULES_DIR"
+        generate_workflows_rule
+        wire_into_agents_mdc "agent-sdd-workflows.mdc"
+        ok "Workflow rules added."
+    fi
+
+    update_cursor_md
+    update_agent_yaml
+    echo
+    echo "✅ Idempotent update complete — no changes needed."
+    exit 0
+fi
+
+# ----------------------------------------------------------------------------
+# Full installation path (sentinel not found, or --force)
+# ----------------------------------------------------------------------------
+mkdir -p "$RULES_DIR"
+
+echo "==> Building Cursor rules from framework..."
+echo "==> Generating Cursor rules..."
+
+generate_agents_mdc
+ok "AGENTS.mdc (entry point)"
+
+generate_overview_rule
+ok "agent-sdd-overview.mdc"
+
+generate_artifacts_rule
+ok "agent-sdd-artifacts.mdc"
+
+generate_lifecycle_rule
+ok "agent-sdd-lifecycle.mdc"
+
+generate_agents_rule
+ok "agent-sdd-agents.mdc"
+
+generate_loop_stages_rule
+ok "agent-sdd-loop-stages.mdc"
+
 if [ "$ADD_SPEC_KIT" = true ]; then
-    SPEC_KIT_LINE="- **SPEC-KIT**: Configured for schema validation (run \`specify init . --integration agent-sdd\` to re-initialize)"
-else
-    SPEC_KIT_LINE="- **SPEC-KIT**: Not configured. Run \`./scripts/agent-sdd-cursor-init.sh --spec-kit\` to enable."
+    generate_spec_kit_rule
+    ok "agent-sdd-spec-kit.mdc (SPEC-KIT integration)"
 fi
 
-if [ -f CURSOR.md ] && [ "$FORCE" = false ]; then
-    warn "CURSOR.md already exists. Skipping (use --force to overwrite)."
-else
-    cat > CURSOR.md <<MD
-# Agent SDD — Cursor IDE Integration
-
-This project uses the [Agent SDD Framework]($FRAMEWORK_DIR/AGENTS.MD) for AI-driven software delivery.
-
-## Cursor Rules
-
-Rules are located in [\`.cursor/rules/\`](.cursor/rules/) and loaded automatically by Cursor:
-
-- **[AGENTS.mdc](.cursor/rules/AGENTS.mdc)** — Entry point; \`@\`\-includes all sub-rules
-- [agent-sdd-overview.mdc](.cursor/rules/agent-sdd-overview.mdc) — Framework overview
-- [agent-sdd-artifacts.mdc](.cursor/rules/agent-sdd-artifacts.mdc) — Artifact types, schemas, templates
-- [agent-sdd-lifecycle.mdc](.cursor/rules/agent-sdd-lifecycle.mdc) — Loop stages and state machines
-- [agent-sdd-agents.mdc](.cursor/rules/agent-sdd-agents.mdc) — Agent roles and responsibilities
-- [agent-sdd-loop-stages.mdc](.cursor/rules/agent-sdd-loop-stages.mdc) — Five loop stage definitions
-$(if [ "$ADD_WORKFLOWS" = true ]; then echo "- [agent-sdd-workflows.mdc](.cursor/rules/agent-sdd-workflows.mdc) — Workflow definitions"; fi)
-$(if [ "$ADD_SPEC_KIT" = true ]; then echo "- [agent-sdd-spec-kit.mdc](.cursor/rules/agent-sdd-spec-kit.mdc) — SPEC-KIT schema validation"; fi)
-
-## Framework Structure
-
-\`\`\`
-$FRAMEWORK_DIR/
-├── AGENTS.MD              # Full framework specification
-├── INDEX.md               # Framework index
-├── agent-sdd.yaml         # Project configuration
-├── loop/                  # Loop stage definitions
-│   ├── 01-requirement.md
-│   ├── 02-development.md
-│   ├── 03-testing.md
-│   ├── 04-release.md
-│   └── 05-feedback.md
-├── agents/                # Agent role definitions
-│   ├── requirement.md
-│   ├── product-manager.md
-│   ├── technical-manager.md
-│   ├── architecture.md
-│   ├── frontend.md
-│   ├── backend.md
-│   ├── tester.md
-│   └── reviewer.md
-├── workflows/             # Workflow specifications
-├── artifacts/             # Artifact instances
-├── schemas/               # JSON Schema contracts
-└── templates/             # Markdown templates
-\`\`\`
-
-## Integrations
-
-$SPEC_KIT_LINE
-
-- **CI Validation**: See [\`.github/workflows/agent-sdd-validate.yml\`](.github/workflows/agent-sdd-validate.yml) for schema validation on push.
-
-## Quick Start
-
-1. **Start a loop**: Open \`$FRAMEWORK_DIR/loop/01-requirement.md\` and follow the requirement workflow.
-2. **Create an artifact**: Use a template from \`$FRAMEWORK_DIR/templates/\`.
-3. **Validate**: Run \`specify validate artifacts/REPO-<id>.md\` (if SPEC-KIT is enabled).
-4. **Review**: Ensure the artifact is in **Approved** status before proceeding to implementation.
-5. **Traceability**: Every artifact must declare its parent and children in the frontmatter.
-
-## Commands
-
-\`\`\`bash
-# Re-initialize Cursor rules (after framework update)
-./scripts/agent-sdd-cursor-init.sh --force
-
-# Add SPEC-KIT integration
-./scripts/agent-sdd-cursor-init.sh --spec-kit
-
-# Show all available rules
-ls -la .cursor/rules/
-\`\`\`
-MD
-    ok "CURSOR.md written"
+if [ "$ADD_WORKFLOWS" = true ]; then
+    generate_workflows_rule
+    ok "agent-sdd-workflows.mdc (workflow rules)"
 fi
 
-# ----------------------------------------------------------------------------
-# 6. Update agent-sdd.yaml
-# ----------------------------------------------------------------------------
-if [ -f "$FRAMEWORK_DIR/agent-sdd.yaml" ]; then
-    if grep -q "cursor:" "$FRAMEWORK_DIR/agent-sdd.yaml" 2>/dev/null; then
-        sedi "s/cursor: .*/cursor: true/" "$FRAMEWORK_DIR/agent-sdd.yaml"
-    else
-        sedi "/ci_validation:/a\  cursor: true" "$FRAMEWORK_DIR/agent-sdd.yaml"
-    fi
-    ok "Updated $FRAMEWORK_DIR/agent-sdd.yaml → cursor: true"
-fi
+update_cursor_md
+update_agent_yaml
+
+touch "$SENTINEL"
+ok "Idempotency sentinel written: $SENTINEL"
 
 # ----------------------------------------------------------------------------
 # Done
@@ -904,8 +954,8 @@ echo " ✅ Agent SDD Cursor IDE integration done!"
 echo "=============================================="
 echo
 echo "Rules installed:"
-find "$RULES_DIR" -name "*.mdc" -type f | while read -r f; do
-    echo "  - $(basename "$f")"
+find "$RULES_DIR" -name "*.mdc" -type f | sort | while read -r _f; do
+    echo "  - $(basename "$_f")"
 done
 echo
 echo "Next steps:"
@@ -918,4 +968,5 @@ if [ "$ADD_SPEC_KIT" = false ]; then
     echo "  • SPEC-KIT: ./scripts/agent-sdd-cursor-init.sh --spec-kit"
 fi
 echo
+echo "Re-running this script is safe (idempotent). Use --force to regenerate."
 echo "Happy delivering!"
