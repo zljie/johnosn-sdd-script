@@ -1,13 +1,5 @@
 # Agent SDD — Agent Software Delivery Driven Framework
 
-> **Version:** 1.0  
-> **Status:** Draft  
-> **Language:** English
-
----
-
-# Agent SDD — Agent Software Delivery Driven Framework
-
 > **Version:** 1.0
 > **Status:** Draft
 > **Language:** English
@@ -16,28 +8,49 @@
 
 ## Quick Start
 
-### For Cursor IDE Users
+### One-Line Installation (Remote)
 
-Start using Agent SDD in Cursor with just a few commands:
+For a new project, run this single command to bootstrap the complete Agent SDD framework with Cursor integration:
 
 ```bash
-# 1. Initialize Cursor IDE integration
-./scripts/agent-sdd-cursor-init.sh --force
+curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-init.sh | bash -s -- --cursor --spec-kit
+```
 
-# 2. Restart Cursor or reload rules to activate
-#    Agent will now automatically load Agent SDD rules
+This command:
+1. Clones the framework into `agent-sdd/`
+2. Sets up Cursor IDE rules (`.cursor/rules/`)
+3. Configures SPEC-KIT schema validation
 
-# 3. Start a new delivery loop
+### Step-by-Step Installation (Manual)
+
+If you prefer manual control or need to add Agent SDD to an existing project:
+
+**Step 1: Bootstrap the framework**
+```bash
+curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-init.sh | bash -s -- --cursor --spec-kit
+```
+
+**Step 2: Initialize Cursor IDE integration**
+```bash
+curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-cursor-init.sh | bash -s -- --dir agent-sdd --spec-kit
+```
+
+**Step 3: Restart Cursor or reload rules**
+- The Agent will now automatically load Agent SDD rules
+
+**Step 4: Start the SDD workflow**
+```bash
+# Initialize a new delivery loop
 /sdd start
 
-# 4. Advance through stages
+# Advance through stages
 /sdd next
 
-# 5. Approve artifacts when ready
+# Approve artifacts when ready
 /sdd approve --artifact REQ-001
 ```
 
-**Available SDD Commands:**
+### SDD Commands Reference
 
 | Command | Description |
 |---------|-------------|
@@ -49,7 +62,7 @@ Start using Agent SDD in Cursor with just a few commands:
 | `/sdd status` | Display current runtime state |
 | `/sdd audit` | Display audit log |
 
-**Validate Artifacts:**
+### Validate Artifacts (CI/CD Ready)
 
 ```bash
 # Validate runtime state
@@ -66,8 +79,6 @@ Start using Agent SDD in Cursor with just a few commands:
 ```
 
 ---
-
-### For Repository Navigation
 
 1. Read `AGENTS.MD` for the canonical framework definition.
 2. See `INDEX.md` for the complete 3-tier manifest of all specs, schemas, and templates.
