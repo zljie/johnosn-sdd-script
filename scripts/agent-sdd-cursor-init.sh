@@ -825,13 +825,18 @@ update_cursor_md() {
 
 # -- Update agent-sdd.yaml -----------------------------------------------------
 update_agent_yaml() {
-    if [ -f "$FRAMEWORK_DIR/agent-sdd.yaml" ]; then
-        if grep -q "cursor:" "$FRAMEWORK_DIR/agent-sdd.yaml" 2>/dev/null; then
-            sedi "s/cursor: .*/cursor: true/" "$FRAMEWORK_DIR/agent-sdd.yaml"
+    local _yaml="$FRAMEWORK_DIR/agent-sdd.yaml"
+    if [ -f "$_yaml" ]; then
+        if grep -q "^[[:space:]]*cursor:" "$_yaml" 2>/dev/null; then
+            sedi "s/^[[:space:]]*cursor:.*/cursor: true/" "$_yaml"
         else
-            sedi "/ci_validation:/a\  cursor: true" "$FRAMEWORK_DIR/agent-sdd.yaml"
+            # awk is more portable than BSD sed 'a' command
+            awk '
+                /^[[:space:]]*ci_validation:/ { print; print "  cursor: true"; next }
+                { print }
+            ' "$_yaml" > "$_yaml.tmp" && mv "$_yaml.tmp" "$_yaml"
         fi
-        ok "Updated $FRAMEWORK_DIR/agent-sdd.yaml → cursor: true"
+        ok "Updated $_yaml → cursor: true"
     fi
 }
 
