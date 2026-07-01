@@ -118,7 +118,9 @@ fi
 # Verify the clone actually contains the expected layout
 # Handle both flat structure (files at root) and nested structure (files in agent-sdd/)
 SRC="$TMP_DIR/framework"
-if [ -d "$SRC/agent-sdd" ] && [ -d "$SRC/agent-sdd/loop" ]; then
+
+# Check if files are in nested agent-sdd/ directory by verifying root is missing key files
+if [ ! -e "$SRC/AGENTS.MD" ] && [ -d "$SRC/agent-sdd" ] && [ -e "$SRC/agent-sdd/AGENTS.MD" ]; then
     SRC="$TMP_DIR/framework/agent-sdd"
 fi
 
