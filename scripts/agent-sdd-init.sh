@@ -116,7 +116,12 @@ if ! git clone --depth 1 "$REPO" "$TMP_DIR/framework" 2>/dev/null; then
 fi
 
 # Verify the clone actually contains the expected layout
+# Handle both flat structure (files at root) and nested structure (files in agent-sdd/)
 SRC="$TMP_DIR/framework"
+if [ -d "$SRC/agent-sdd" ] && [ -d "$SRC/agent-sdd/loop" ]; then
+    SRC="$TMP_DIR/framework/agent-sdd"
+fi
+
 for required in AGENTS.MD INDEX.md loop agents workflows artifacts schemas templates; do
     if [ ! -e "$SRC/$required" ]; then
         err "Cloned repo is missing '$required'. Is --repo pointing at the right project?"
