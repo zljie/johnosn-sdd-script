@@ -8,6 +8,7 @@
 #   ./agent-sdd-init.sh --force             # non-interactive, overwrite without prompting
 #   ./agent-sdd-init.sh --no-ci             # skip CI workflow prompt
 #   ./agent-sdd-init.sh --spec-kit         # non-interactive, add SPEC-KIT integration
+#   ./agent-sdd-init.sh --cursor          # non-interactive, also wire Cursor IDE
 #   ./agent-sdd-init.sh --repo <git-url>  # override framework repo
 #   ./agent-sdd-init.sh --dir agent-sdd     # override target directory
 #
@@ -22,6 +23,7 @@ FORCE=false
 ADD_CI=false
 NO_CI=false
 ADD_SPEC_KIT=false
+ADD_CURSOR=false
 
 usage() {
     sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
@@ -34,6 +36,7 @@ while [[ $# -gt 0 ]]; do
         --ci)               ADD_CI=true; shift ;;
         --no-ci)            NO_CI=true; shift ;;
         --spec-kit)         ADD_SPEC_KIT=true; shift ;;
+        --cursor)           ADD_CURSOR=true; shift ;;
         --repo)             REPO="$2"; shift 2 ;;
         --dir)              FRAMEWORK_DIR="$2"; shift 2 ;;
         --help|-h)          usage 0 ;;
@@ -377,7 +380,38 @@ if [ "$ADD_SPEC_KIT" = true ]; then
 fi
 
 # ----------------------------------------------------------------------------
-# 8. .gitignore hint for backups
+# 8. Optional Cursor IDE integration
+# ----------------------------------------------------------------------------
+CURSOR_SCRIPT="./scripts/agent-sdd-cursor-init.sh"
+if [ "$ADD_CURSOR" = false ] && [ "$NO_CI" = false ]; then
+    echo "==> Optional: Cursor IDE integration"
+    if prompt_yes_no "Wire Agent SDD rules into the Cursor IDE (.cursor/rules/)?"; then
+        ADD_CURSOR=true
+    fi
+fi
+
+if [ "$ADD_CURSOR" = true ]; then
+    if [ -f "$CURSOR_SCRIPT" ]; then
+        echo "==> Running Cursor IDE integration..."
+        CURSOR_FLAGS="--dir $FRAMEWORK_DIR"
+        if [ "$ADD_SPEC_KIT" = true ]; then
+            CURSOR_FLAGS="$CURSOR_FLAGS --spec-kit"
+        fi
+        # shellcheck disable=SC2086
+        if bash "$CURSOR_SCRIPT" $CURSOR_FLAGS; then
+            ok "Cursor IDE integration complete."
+        else
+            warn "Cursor IDE integration failed. Run '$CURSOR_SCRIPT' manually."
+        fi
+    else
+        warn "Cursor script not found at '$CURSOR_SCRIPT'."
+        warn "To install Cursor rules via curl, run:"
+        warn "  curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-cursor-init.sh | bash -- --dir $FRAMEWORK_DIR${ADD_SPEC_KIT:+" --spec-kit"}"
+    fi
+fi
+
+# ----------------------------------------------------------------------------
+# 9. .gitignore hint for backups
 # ----------------------------------------------------------------------------
 if [ -f .gitignore ]; then
     if ! grep -q "${FRAMEWORK_DIR}.backup" .gitignore; then
@@ -407,6 +441,9 @@ echo "Optional integrations:"
 if [ "$ADD_SPEC_KIT" = false ]; then
     echo "  • spec-kit:   uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
     echo "                 specify init . --integration agent-sdd"
+fi
+if [ "$ADD_CURSOR" = false ]; then
+    echo "  • cursor-ide: ./scripts/agent-sdd-cursor-init.sh --dir $FRAMEWORK_DIR"
 fi
 echo "  • validate:   pip install jsonschema pyyaml && see $CI_FILE"
 echo
