@@ -69,6 +69,11 @@ prompt_yes_no() {
         echo "[AUTO] ${question} -> yes (--force)"
         return 0
     fi
+    # Pipe/redirect execution: no TTY means we cannot read input
+    if [ ! -t 0 ]; then
+        echo "[AUTO] ${question} -> yes (non-interactive, no TTY)"
+        return 0
+    fi
     printf "%s (y/n) " "$question"
     local ans
     read -r ans || ans=""
