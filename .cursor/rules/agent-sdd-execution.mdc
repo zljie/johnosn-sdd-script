@@ -1,0 +1,130 @@
+---
+description: Agent SDD Execution Rule — Mandatory state checking before any implementation
+version: 1.0
+---
+
+# Agent SDD Execution Rule
+
+> **CRITICAL**: This rule is MANDATORY. Violations should be flagged immediately.
+> The Agent SDD framework treats execution as a state machine. You MUST check state BEFORE acting.
+
+## Pre-Implementation Checklist
+
+Before ANY implementation task, you MUST execute the following steps:
+
+### Step 1: Read Runtime State
+
+Read `agent-sdd/runtime-state.json`
+
+If the file does not exist, the loop has not been started. Ask the user to run `/sdd start`.
+
+### Step 2: Identify Current Loop Stage
+
+From `runtime-state.json`, extract:
+- `current.loop_stage` — current stage (01-requirement, 02-development, 03-testing, 04-release)
+- `current.agent_role` — current agent responsibility
+- `current.artifact_id` — artifact being worked on
+
+### Step 3: Load Stage Definition
+
+Load the corresponding loop file based on current stage:
+
+| Stage | File |
+|-------|------|
+| 01-requirement | `agent-sdd/loop/01-requirement.md` |
+| 02-development | `agent-sdd/loop/02-development.md` |
+| 03-testing | `agent-sdd/loop/03-testing.md` |
+| 04-release | `agent-sdd/loop/04-release.md` |
+
+### Step 4: Check Required Artifacts
+
+From `artifacts.required` in `runtime-state.json`, verify each required artifact:
+
+1. **Exists**: Check the artifact file exists in `agent-sdd/artifacts/`
+2. **Status**: Verify status in frontmatter is `Approved`
+3. **Traceability**: Verify parent/children links are complete
+
+### Step 5: Gate Validation
+
+If you are attempting to advance to the next stage:
+
+1. Load the quality gate definition from the current stage file
+2. Validate all gate criteria are met
+3. If gate fails: STOP, report issues, do not proceed
+
+## Implementation Guards
+
+### NEVER Do These Things
+
+1. **NEVER** write production code before REQ, PS, TS, and AD are Approved
+2. **NEVER** skip a quality gate
+3. **NEVER** modify another agent's artifact directly
+4. **NEVER** create new artifacts without saving to `agent-sdd/artifacts/`
+5. **NEVER** skip artifact frontmatter (id, status, owner, traceability)
+
+### ALWAYS Do These Things
+
+1. **ALWAYS** check `runtime-state.json` before answering
+2. **ALWAYS** read the current loop stage definition
+3. **ALWAYS** validate required artifacts are Approved before proceeding
+4. **ALWAYS** save outputs as artifacts with complete frontmatter
+5. **ALWAYS** update `runtime-state.json` after handoff
+6. **ALWAYS** use templates from `agent-sdd/templates/`
+7. **ALWAYS** validate artifacts against schemas from `agent-sdd/schemas/`
+
+## Command Protocol Reference
+
+When the user says `/sdd <command>`, execute the corresponding protocol:
+
+| Command | Action |
+|---------|--------|
+| `/sdd start` | Initialize loop from 01-requirement |
+| `/sdd next` | Validate current stage, advance if gate passes |
+| `/sdd approve` | Mark artifact as Approved, record audit |
+| `/sdd validate` | Validate artifacts against schemas |
+| `/sdd feedback` | Create FeedbackArtifact |
+| `/sdd status` | Display current runtime state |
+| `/sdd audit` | Display audit log |
+
+See `agent-sdd/commands/sdd-command-protocol.md` for full command specifications.
+
+## Stage-Specific Constraints
+
+### 01-requirement
+- **Required Input**: User Requirement (raw)
+- **Produced Artifact**: REQ
+- **Guard**: REQ must be Approved before exiting this stage
+
+### 02-development
+- **Required Input**: REQ (Approved), PS (Approved)
+- **Produced Artifacts**: TS, AD, US, TASK, FI, BI
+- **Guard**: TS and AD must be Approved before code implementation
+
+### 03-testing
+- **Required Input**: FI, BI, TC
+- **Produced Artifacts**: TR, QEP
+- **Guard**: All test cases must pass before QEP
+
+### 04-release
+- **Required Input**: QEP, DRR
+- **Produced Artifact**: SDP
+- **Guard**: Human approval required for production release
+
+## Violation Response
+
+If you detect a violation of this execution rule:
+
+```
+[EXECUTION BLOCKED]
+
+Reason: <specific violation>
+Current Stage: <stage>
+Missing: <list of required items>
+Required Action: <corrective action>
+
+Do not proceed until the violation is resolved.
+```
+
+---
+
+**Remember**: Cursor Rules solve "knowing the rules". Runtime State solves "remembering the progress". Quality Gates solve "enforcing the constraints". Validator solves "preventing violations".

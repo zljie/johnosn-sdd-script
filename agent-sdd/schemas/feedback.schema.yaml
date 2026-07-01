@@ -1,0 +1,82 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/feedback.schema.yaml
+title: Feedback
+description: Feedback Artifact (FB) produced when a quality gate fails or issues are identified.
+version: 1.0.0
+
+type: object
+additionalProperties: false
+required:
+  - id
+  - source_stage
+  - target_stage
+  - category
+  - severity
+  - description
+  - status
+
+properties:
+  id:
+    type: string
+    pattern: '^FB-[0-9]{3,}$'
+  source_stage:
+    type: string
+    enum: [01-requirement, 02-development, 03-testing, 04-release]
+  target_stage:
+    type: string
+    enum: [01-requirement, 02-development, 03-testing, 04-release]
+  category:
+    type: string
+    enum: [Requirement, Product, Technical, Architecture, Quality, Implementation]
+  severity:
+    type: string
+    enum: [Critical, High, Medium, Low]
+  description:
+    type: string
+    minLength: 1
+  issues:
+    type: array
+    items:
+      type: object
+      required: [field, issue, suggestion]
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+        suggestion:
+          type: string
+  status:
+    type: string
+    enum: [Created, Assigned, Accepted, Resolved, Verified, Closed]
+  assignee:
+    type: string
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time
+  resolved_at:
+    type: string
+    format: date-time
+  traceability:
+    type: object
+    properties:
+      parent:
+        type: string
+        description: The artifact that triggered this feedback
+      children:
+        type: array
+        items:
+          type: string
+          description: New artifacts created to address this feedback
+  metadata:
+    type: object
+    properties:
+      owner:
+        type: string
+      created_by:
+        type: string
+      version:
+        type: string

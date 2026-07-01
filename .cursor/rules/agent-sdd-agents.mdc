@@ -1,0 +1,107 @@
+---
+description: Agent SDD Agents — roles, responsibilities, and interaction patterns
+version: 1.0
+---
+
+# Agent SDD Agents
+
+Each agent represents a professional engineering role with clearly defined responsibilities. Agents collaborate through standardized artifacts — there is no hidden memory shared between agents.
+
+## Agent Roster
+
+**Architecture**
+
+**Backend**
+
+**Frontend**
+
+**Product Manager**
+
+**Requirement**
+
+**Reviewer**
+
+**Technical Manager**
+
+**Tester**
+
+## Agent Communication Model
+
+```
+User
+  │
+  ▼
+Requirement Agent
+  │
+  ▼ (produces REQ)
+Product Manager Agent
+  │
+  ▼ (produces PS)
+Technical Manager Agent
+  │
+  ▼ (produces TS)
+Architecture Agent
+  │
+  ▼ (produces AD)
+  ├──────────┐
+  ▼         ▼
+Frontend  Backend
+Agent      Agent
+  │         │
+  └────┬────┘
+       ▼
+  Tester Agent
+       │
+       ▼
+  Reviewer Agent
+       │
+       ▼
+   Release Flow
+```
+
+## Agent Execution Lifecycle
+
+Every agent follows the same execution lifecycle:
+
+```
+Receive Input → Understand → Analyze → Plan → Execute → Self-Validate → Produce Artifact → Handoff
+```
+
+## Agent Contract
+
+Every agent exposes a standard contract:
+
+```yaml
+agent:
+  id:           # Unique identifier
+  role:         # Agent role name
+  description:  # One-line description
+  consumes:     # Artifact types this agent reads
+  produces:     # Artifact types this agent writes
+  qualityGate:  # Validation this agent performs before producing
+  feedback:     # Feedback types this agent can create
+  owner:        # Human or system owner
+```
+
+## Artifact Flow
+
+When working as or with an Agent SDD agent:
+
+1. **Read** the relevant artifact from `agent-sdd/artifacts/`
+2. **Validate** it is in the correct lifecycle state
+3. **Produce** the next artifact in the chain
+4. **Write** the artifact to `agent-sdd/artifacts/`
+5. **Do not** modify another agent's output directly
+
+## Agent Detail Files
+
+Each agent's full definition lives in `agent-sdd/agents/`:
+
+- `architecture.md`
+- `backend.md`
+- `frontend.md`
+- `product-manager.md`
+- `requirement.md`
+- `reviewer.md`
+- `technical-manager.md`
+- `tester.md`

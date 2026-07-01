@@ -1,0 +1,104 @@
+---
+description: Agent SDD Lifecycle — loop stages, state machines, and quality gates
+version: 1.0
+---
+
+# Agent SDD Lifecycle
+
+## Software Delivery Loop
+
+The framework operates as a continuous loop of five stages:
+
+```
+┌─────────────────────┐
+│ 01. Requirement      │
+│ (Discovery)         │
+└──────────┬──────────┘
+           ▼
+┌─────────────────────┐
+│ 02. Development      │
+│ (Planning & Build)  │
+└──────────┬──────────┘
+           ▼
+┌─────────────────────┐
+│ 03. Testing          │
+│ (Quality Assurance) │
+└──────────┬──────────┘
+           ▼
+┌─────────────────────┐
+│ 04. Release          │
+│ (Delivery Governance)│
+└──────────┬──────────┘
+           ▼
+┌─────────────────────┐
+│ 05. Feedback        │
+│ (Customer / Incident│
+└──────────┬──────────┘
+           ▼
+    Requirement ← NEW CYCLE
+```
+
+## Loop Stage Definitions
+
+Each stage is defined in `agent-sdd/loop/`:
+
+- `01-requirement.md` — Requirement discovery and capture
+- `02-development.md` — Planning, architecture, and implementation
+- `03-testing.md` — Quality assurance and test execution
+- `04-release.md` — Delivery governance and release management
+
+## Artifact Lifecycle States
+
+Artifacts progress through a fixed lifecycle and **never skip states**:
+
+```
+Draft → Ready → Approved → In Progress → Completed → Verified → Released → Archived
+```
+
+| State | Meaning |
+|-------|---------|
+| Draft | Being authored, not yet ready for review |
+| Ready | Author believes it is complete; awaiting review |
+| Approved | Reviewed and accepted; ready for downstream use |
+| In Progress | Work is actively being done |
+| Completed | Work is done; awaiting verification |
+| Verified | Quality verified; ready for release |
+| Released | Delivered to production or customer |
+| Archived | Superseded or no longer active |
+
+## Workflow State Machine
+
+Each workflow follows:
+
+```
+Draft → Ready → Running → Waiting Review → Approved → Completed → Archived
+```
+
+## Quality Gates
+
+Every stage has mandatory quality gates. If a gate fails:
+1. Stop the workflow.
+2. Generate structured feedback.
+3. Return the artifact to the responsible agent.
+4. Repeat validation.
+
+No workflow may bypass quality gates.
+
+## Human Approval Points
+
+The following decisions require explicit human approval:
+- Requirement Approval
+- Product Approval
+- Architecture Approval
+- Production Release
+- Emergency Rollback
+
+## Feedback Lifecycle
+
+Feedback is a first-class artifact. It follows:
+
+```
+Created → Assigned → Accepted → Resolved → Verified → Closed
+```
+
+Feedback never modifies an existing artifact directly — it creates new work.

@@ -1,0 +1,175 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://agent-sdd.dev/schemas/runtime-state.schema.json
+title: Runtime State
+description: Runtime state file for Agent SDD Software Delivery Loop
+version: 1.0.0
+
+type: object
+additionalProperties: true
+required:
+  - meta
+  - current
+  - artifacts
+  - gates
+  - approvals
+  - status
+
+properties:
+  _schema:
+    type: string
+    const: agent-sdd/runtime-state.schema.json
+  _version:
+    type: string
+    pattern: ^[0-9]+\.[0-9]+\.[0-9]+$
+
+  meta:
+    type: object
+    required: [loop_id, loop_count]
+    properties:
+      loop_id:
+        type: string
+        pattern: ^LOOP-[0-9]+$
+      loop_count:
+        type: integer
+        minimum: 1
+      created_at:
+        type: [string, null]
+        format: date-time
+      updated_at:
+        type: [string, null]
+        format: date-time
+      started_by:
+        type: [string, null]
+
+  current:
+    type: object
+    required: [loop_stage]
+    properties:
+      loop_stage:
+        type: [string, null]
+        enum: [null, 01-requirement, 02-development, 03-testing, 04-release, completed]
+      agent_role:
+        type: [string, null]
+      workflow:
+        type: [string, null]
+      artifact_id:
+        type: [string, null]
+      artifact_status:
+        type: [string, null]
+
+  artifacts:
+    type: object
+    properties:
+      required:
+        type: array
+        items:
+          type: string
+      produced:
+        type: array
+        items:
+          type: string
+      approved:
+        type: array
+        items:
+          type: string
+
+  gates:
+    type: object
+    properties:
+      current_gate:
+        type: [string, null]
+      last_gate_result:
+        type: [string, null]
+        enum: [null, PASS, FAIL, CONDITIONAL_PASS]
+      last_gate_timestamp:
+        type: [string, null]
+        format: date-time
+      gate_history:
+        type: array
+        items:
+          type: object
+          required: [timestamp, result, gate]
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            result:
+              type: string
+              enum: [PASS, FAIL, CONDITIONAL_PASS]
+            gate:
+              type: string
+
+  approvals:
+    type: object
+    properties:
+      required:
+        type: boolean
+      pending:
+        type: array
+        items:
+          type: object
+          required: [artifact_id, approver]
+          properties:
+            artifact_id:
+              type: string
+            approver:
+              type: string
+            requested_at:
+              type: string
+              format: date-time
+      completed:
+        type: array
+        items:
+          type: object
+          required: [artifact_id, approver, approved_at]
+          properties:
+            artifact_id:
+              type: string
+            approver:
+              type: string
+            approved_at:
+              type: string
+              format: date-time
+            comment:
+              type: string
+
+  traceability:
+    type: object
+    properties:
+      parent_loop:
+        type: [string, null]
+      parent_artifact:
+        type: [string, null]
+      children_artifacts:
+        type: array
+        items:
+          type: string
+
+  status:
+    type: string
+    enum: [initialized, running, waiting_review, paused, completed, archived]
+
+  audit_log:
+    type: array
+    items:
+      type: object
+      required: [id, timestamp, action, actor]
+      properties:
+        id:
+          type: string
+          pattern: ^AUDIT-[0-9]+$
+        timestamp:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum: [STARTED, ADVANCED, APPROVED, VALIDATED, FEEDBACK_CREATED, STATE_UPDATED, GATE_PASSED, GATE_FAILED]
+        actor:
+          type: string
+        artifact_id:
+          type: [string, null]
+        stage:
+          type: [string, null]
+        details:
+          type: object
+          additionalProperties: true

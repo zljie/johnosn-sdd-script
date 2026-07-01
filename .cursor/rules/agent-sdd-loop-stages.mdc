@@ -1,0 +1,79 @@
+---
+description: Agent SDD Loop Stages — the five stages of the Software Delivery Loop
+version: 1.0
+---
+
+# Agent SDD Loop Stages
+
+The Software Delivery Loop consists of five stages. Each stage is defined in `agent-sdd/loop/`.
+
+## Stage Overview
+
+- **00-loop** — 
+- **01-requirement** — 
+- **02-development** — 
+- **03-testing** — 
+- **04-release** — 
+
+## Stage Details
+
+### 00-loop
+
+```quote
+引用自: `agent-sdd/loop/00-loop.md`
+> *(内容摘要 — 完整定义见框架文件)*
+```
+
+### 01-requirement
+
+```quote
+引用自: `agent-sdd/loop/01-requirement.md`
+> *(内容摘要 — 完整定义见框架文件)*
+```
+
+### 02-development
+
+```quote
+引用自: `agent-sdd/loop/02-development.md`
+> *(内容摘要 — 完整定义见框架文件)*
+```
+
+### 03-testing
+
+```quote
+引用自: `agent-sdd/loop/03-testing.md`
+> *(内容摘要 — 完整定义见框架文件)*
+```
+
+### 04-release
+
+```quote
+引用自: `agent-sdd/loop/04-release.md`
+> *(内容摘要 — 完整定义见框架文件)*
+```
+
+## Stage Relationships
+
+```
+01-requirement
+  consumes: User Requirement
+  produces: REQ, PS
+  ↓
+02-development
+  consumes: REQ, PS
+  produces: TS, AD, US, TASK, FI, BI
+  ↓
+03-testing
+  consumes: FI, BI, TC
+  produces: TR, QEP
+  ↓
+04-release
+  consumes: QEP, DRR
+  produces: SDP
+  ↓
+05-feedback
+  consumes: SDP, Production Incidents
+  produces: New REQ
+  ↓
+  (back to 01-requirement)
+```

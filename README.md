@@ -6,15 +6,74 @@
 
 ---
 
+# Agent SDD — Agent Software Delivery Driven Framework
+
+> **Version:** 1.0
+> **Status:** Draft
+> **Language:** English
+
+---
+
 ## Quick Start
 
-This is the **Agent Software Delivery Driven (Agent SDD)** framework specification repository.
+### For Cursor IDE Users
 
-To navigate the specs:
+Start using Agent SDD in Cursor with just a few commands:
+
+```bash
+# 1. Initialize Cursor IDE integration
+./scripts/agent-sdd-cursor-init.sh --force
+
+# 2. Restart Cursor or reload rules to activate
+#    Agent will now automatically load Agent SDD rules
+
+# 3. Start a new delivery loop
+/sdd start
+
+# 4. Advance through stages
+/sdd next
+
+# 5. Approve artifacts when ready
+/sdd approve --artifact REQ-001
+```
+
+**Available SDD Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `/sdd start` | Initialize loop from 01-requirement |
+| `/sdd next` | Validate current stage, advance if gate passes |
+| `/sdd approve` | Mark artifact as Approved |
+| `/sdd validate` | Validate artifacts against schemas |
+| `/sdd feedback` | Create structured feedback |
+| `/sdd status` | Display current runtime state |
+| `/sdd audit` | Display audit log |
+
+**Validate Artifacts:**
+
+```bash
+# Validate runtime state
+./scripts/agent-sdd-validate.sh --state
+
+# Validate all artifacts
+./scripts/agent-sdd-validate.sh
+
+# Validate specific artifact
+./scripts/agent-sdd-validate.sh --artifact REQ-001
+
+# CI mode (exit codes only)
+./scripts/agent-sdd-validate.sh --ci
+```
+
+---
+
+### For Repository Navigation
 
 1. Read `AGENTS.MD` for the canonical framework definition.
 2. See `INDEX.md` for the complete 3-tier manifest of all specs, schemas, and templates.
 3. Start at `loop/01-requirement.md` to understand the 4-stage Software Delivery Loop.
+
+---
 
 ## What is Agent SDD?
 
@@ -43,6 +102,10 @@ See `loop/00-loop.md` for the complete loop definition.
 agent-sdd/
 ├── AGENTS.MD              # Canonical framework definition (source of truth)
 ├── INDEX.md               # Runtime entry point with 3-tier manifest
+├── agent-sdd.yaml         # Framework configuration
+├── runtime-state.json     # Runtime state (memory)
+├── commands/              # SDD command protocols
+│   └── sdd-command-protocol.md
 ├── loop/                  # 4-stage loop as first-class artifacts
 │   ├── 00-loop.md
 │   ├── 01-requirement.md
@@ -52,8 +115,24 @@ agent-sdd/
 ├── agents/                 # 8 agent specifications (3-tier)
 ├── workflows/              # 4 workflow specifications (3-tier)
 ├── artifacts/              # 11 artifact specifications (3-tier)
-├── schemas/                # 13 JSON Schemas (machine-consumable)
+├── schemas/                # 15 JSON Schemas (machine-consumable)
+│   ├── runtime-state.schema.json
+│   └── feedback.schema.yaml
 └── templates/              # 11 template skeletons (for runtime agents)
+
+.cursor/rules/              # Cursor IDE integration
+├── AGENTS.mdc              # Entry point
+├── agent-sdd-overview.mdc
+├── agent-sdd-artifacts.mdc
+├── agent-sdd-lifecycle.mdc
+├── agent-sdd-agents.mdc
+├── agent-sdd-loop-stages.mdc
+└── agent-sdd-execution.mdc  # MANDATORY: State checking & guards
+
+scripts/
+├── agent-sdd-cursor-init.sh    # Initialize Cursor integration
+├── agent-sdd-validate.sh       # Artifact validator (CI/CD ready)
+└── agent-sdd-init.sh           # Bootstrap framework
 ```
 
 See `INDEX.md` for the complete manifest.

@@ -1,9 +1,0 @@
-# Harness Reuse Principles
-
-Always apply Harness reuse principles:
-
-1. **Find Similar**: before any code generation, search codebase for similar implementations using `grep` or codebase index. Cite findings in your response.
-2. **Reuse First**: prefer reusing existing components, interfaces, types, and utilities. Do not duplicate functionality.
-3. **Copy & Adapt**: if a new file is needed, copy the most similar existing file and modify it; preserve the original structure, naming style, error handling patterns, and directory layout.
-
-In `/speckit.plan` and `/speckit.implement` stages, follow these rules strictly. Before designing a solution or writing new code, always search for and reference similar existing implementations first.

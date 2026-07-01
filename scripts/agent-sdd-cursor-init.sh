@@ -96,6 +96,7 @@ version: 1.0
 @ agent-sdd-lifecycle.mdc
 @ agent-sdd-agents.mdc
 @ agent-sdd-loop-stages.mdc
+@ agent-sdd-execution.mdc
 AGENTS_MDC
 }
 
@@ -299,7 +300,6 @@ Each stage is defined in \`$_dir/loop/\`:
 - \`02-development.md\` — Planning, architecture, and implementation
 - \`03-testing.md\` — Quality assurance and test execution
 - \`04-release.md\` — Delivery governance and release management
-- \`05-feedback.md\` — Customer feedback and incident handling
 
 ## Artifact Lifecycle States
 
@@ -567,6 +567,144 @@ $(printf "%s\n" "$_details")
 STAGES_RULES
 }
 
+# -- Generate agent-sdd-execution.mdc (MANDATORY) ----------------------------
+# This is the core enforcement rule that ensures Agent SDD compliance.
+generate_execution_rule() {
+    local _dir="$FRAMEWORK_DIR"
+    cat > "$RULES_DIR/agent-sdd-execution.mdc" <<EXECUTION_MDC
+---
+description: Agent SDD Execution Rule — Mandatory state checking before any implementation
+version: 1.0
+---
+
+# Agent SDD Execution Rule
+
+> **CRITICAL**: This rule is MANDATORY. Violations should be flagged immediately.
+> The Agent SDD framework treats execution as a state machine. You MUST check state BEFORE acting.
+
+## Pre-Implementation Checklist
+
+Before ANY implementation task, you MUST execute the following steps:
+
+### Step 1: Read Runtime State
+
+Read \`$_dir/runtime-state.json\`
+
+If the file does not exist, the loop has not been started. Ask the user to run \`/sdd start\`.
+
+### Step 2: Identify Current Loop Stage
+
+From \`runtime-state.json\`, extract:
+- \`current.loop_stage\` — current stage (01-requirement, 02-development, 03-testing, 04-release)
+- \`current.agent_role\` — current agent responsibility
+- \`current.artifact_id\` — artifact being worked on
+
+### Step 3: Load Stage Definition
+
+Load the corresponding loop file based on current stage:
+
+| Stage | File |
+|-------|------|
+| 01-requirement | \`$_dir/loop/01-requirement.md\` |
+| 02-development | \`$_dir/loop/02-development.md\` |
+| 03-testing | \`$_dir/loop/03-testing.md\` |
+| 04-release | \`$_dir/loop/04-release.md\` |
+
+### Step 4: Check Required Artifacts
+
+From \`artifacts.required\` in \`runtime-state.json\`, verify each required artifact:
+
+1. **Exists**: Check the artifact file exists in \`$_dir/artifacts/\`
+2. **Status**: Verify status in frontmatter is \`Approved\`
+3. **Traceability**: Verify parent/children links are complete
+
+### Step 5: Gate Validation
+
+If you are attempting to advance to the next stage:
+
+1. Load the quality gate definition from the current stage file
+2. Validate all gate criteria are met
+3. If gate fails: STOP, report issues, do not proceed
+
+## Implementation Guards
+
+### NEVER Do These Things
+
+1. **NEVER** write production code before REQ, PS, TS, and AD are Approved
+2. **NEVER** skip a quality gate
+3. **NEVER** modify another agent's artifact directly
+4. **NEVER** create new artifacts without saving to \`$_dir/artifacts/\`
+5. **NEVER** skip artifact frontmatter (id, status, owner, traceability)
+
+### ALWAYS Do These Things
+
+1. **ALWAYS** check \`runtime-state.json\` before answering
+2. **ALWAYS** read the current loop stage definition
+3. **ALWAYS** validate required artifacts are Approved before proceeding
+4. **ALWAYS** save outputs as artifacts with complete frontmatter
+5. **ALWAYS** update \`runtime-state.json\` after handoff
+6. **ALWAYS** use templates from \`$_dir/templates/\`
+7. **ALWAYS** validate artifacts against schemas from \`$_dir/schemas/\`
+
+## Command Protocol Reference
+
+When the user says \`/sdd <command>\`, execute the corresponding protocol:
+
+| Command | Action |
+|---------|--------|
+| \`/sdd start\` | Initialize loop from 01-requirement |
+| \`/sdd next\` | Validate current stage, advance if gate passes |
+| \`/sdd approve\` | Mark artifact as Approved, record audit |
+| \`/sdd validate\` | Validate artifacts against schemas |
+| \`/sdd feedback\` | Create FeedbackArtifact |
+| \`/sdd status\` | Display current runtime state |
+| \`/sdd audit\` | Display audit log |
+
+See \`$_dir/commands/sdd-command-protocol.md\` for full command specifications.
+
+## Stage-Specific Constraints
+
+### 01-requirement
+- **Required Input**: User Requirement (raw)
+- **Produced Artifact**: REQ
+- **Guard**: REQ must be Approved before exiting this stage
+
+### 02-development
+- **Required Input**: REQ (Approved), PS (Approved)
+- **Produced Artifacts**: TS, AD, US, TASK, FI, BI
+- **Guard**: TS and AD must be Approved before code implementation
+
+### 03-testing
+- **Required Input**: FI, BI, TC
+- **Produced Artifacts**: TR, QEP
+- **Guard**: All test cases must pass before QEP
+
+### 04-release
+- **Required Input**: QEP, DRR
+- **Produced Artifact**: SDP
+- **Guard**: Human approval required for production release
+
+## Violation Response
+
+If you detect a violation of this execution rule:
+
+\`\`\`
+[EXECUTION BLOCKED]
+
+Reason: <specific violation>
+Current Stage: <stage>
+Missing: <list of required items>
+Required Action: <corrective action>
+
+Do not proceed until the violation is resolved.
+\`\`\`
+
+---
+
+**Remember**: Cursor Rules solve "knowing the rules". Runtime State solves "remembering the progress". Quality Gates solve "enforcing the constraints". Validator solves "preventing violations".
+EXECUTION_MDC
+}
+
 # -- Generate SPEC-KIT rule (optional) ----------------------------------------
 generate_spec_kit_rule() {
     local _dir="$FRAMEWORK_DIR"
@@ -780,6 +918,7 @@ update_cursor_md() {
             printf '%s\n' "- [agent-sdd-lifecycle.mdc](.cursor/rules/agent-sdd-lifecycle.mdc) — Loop stages and state machines"
             printf '%s\n' "- [agent-sdd-agents.mdc](.cursor/rules/agent-sdd-agents.mdc) — Agent roles and responsibilities"
             printf '%s\n' "- [agent-sdd-loop-stages.mdc](.cursor/rules/agent-sdd-loop-stages.mdc) — Five loop stage definitions"
+            printf '%s\n' "- [agent-sdd-execution.mdc](.cursor/rules/agent-sdd-execution.mdc) — **MANDATORY** Execution Rule (state checking, guards, commands)"
             [ -n "$_workflows_rule" ] && printf '%s\n' "$_workflows_rule"
             [ -n "$_spec_kit_rule"  ] && printf '%s\n' "$_spec_kit_rule"
             printf '\n%s\n' "## Framework Structure"
@@ -788,17 +927,19 @@ update_cursor_md() {
             printf '%s\n' "├── AGENTS.MD              # Full framework specification"
             printf '%s\n' "├── INDEX.md               # Framework index"
             printf '%s\n' "├── agent-sdd.yaml         # Project configuration"
+            printf '%s\n' "├── runtime-state.json     # Runtime state (memory)"
             printf '%s\n' "├── loop/                  # Loop stage definitions"
             printf '%s\n' "│   ├── 01-requirement.md"
             printf '%s\n' "│   ├── 02-development.md"
             printf '%s\n' "│   ├── 03-testing.md"
-            printf '%s\n' "│   ├── 04-release.md"
-            printf '%s\n' "│   └── 05-feedback.md"
+            printf printf '%s\n' "│   ├── 04-release.md"
             printf '%s\n' "├── agents/                # Agent role definitions"
             printf '%s\n' "├── workflows/             # Workflow specifications"
             printf '%s\n' "├── artifacts/             # Artifact instances"
             printf '%s\n' "├── schemas/               # JSON Schema contracts"
-            printf '%s\n' "└── templates/             # Markdown templates"
+            printf '%s\n' "├── templates/             # Markdown templates"
+            printf '%s\n' "└── commands/              # SDD command protocols"
+            printf '%s\n' "    └── sdd-command-protocol.md"
             printf '%s\n' "\`\`\`"
             printf '\n%s\n' "## Quick Start"
             printf '\n%s\n' "1. **Start a loop**: Open \\\`$_dir/loop/01-requirement.md\\\` and follow the requirement workflow."
@@ -874,7 +1015,7 @@ if [ "$FORCE" = true ]; then
         rm -f "$SENTINEL"
     fi
     if [ -d "$RULES_DIR" ]; then
-        local _backup="${RULES_DIR}.backup.$(date +%s)"
+        _backup="${RULES_DIR}.backup.$(date +%s)"
         mv "$RULES_DIR" "$_backup"
         ok "Existing rules backed up to $_backup"
     fi
@@ -933,6 +1074,9 @@ ok "agent-sdd-agents.mdc"
 
 generate_loop_stages_rule
 ok "agent-sdd-loop-stages.mdc"
+
+generate_execution_rule
+ok "agent-sdd-execution.mdc (MANDATORY — state checking, guards, commands)"
 
 if [ "$ADD_SPEC_KIT" = true ]; then
     generate_spec_kit_rule

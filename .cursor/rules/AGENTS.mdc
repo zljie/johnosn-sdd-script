@@ -1,0 +1,11 @@
+---
+description: Agent SDD — Software Delivery Framework
+version: 1.0
+---
+
+@ agent-sdd-overview.mdc
+@ agent-sdd-artifacts.mdc
+@ agent-sdd-lifecycle.mdc
+@ agent-sdd-agents.mdc
+@ agent-sdd-loop-stages.mdc
+@ agent-sdd-execution.mdc

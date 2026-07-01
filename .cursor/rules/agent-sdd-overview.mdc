@@ -1,0 +1,62 @@
+---
+description: Agent SDD Framework Overview — what the framework is and how it works
+version: 1.0
+---
+
+# Agent SDD Framework Overview
+
+## What Is Agent SDD?
+
+Agent SDD (Agent Software Delivery Driven) is an AI-native software delivery framework that treats AI as a collaborative engineering organization composed of specialized agents.
+
+Instead of compressing all engineering responsibilities into a single model, Agent SDD separates them into well-defined agents that collaborate through standardized **artifacts**.
+
+## Core Principles
+
+1. **Single Responsibility** — Each agent owns exactly one engineering domain.
+2. **Artifact First** — Agents never communicate through free-form conversations. Artifacts are the engineering contract.
+3. **Traceability First** — Every artifact contains id, parent, children, owner, version, and status.
+4. **Quality by Design** — Quality is built into every stage, not inspected at the end.
+5. **Human-in-the-Loop (HITL)** — AI accelerates; humans make final approval decisions.
+6. **Feedback Driven** — Production feedback creates a new engineering cycle.
+
+## Agent Types
+
+| Agent | Domain | Produces |
+|-------|--------|----------|
+| Requirement Agent | Business requirements | REQ |
+| Product Manager Agent | Product specification | PS |
+| Technical Manager Agent | Technical planning | TS |
+| Architecture Agent | Architecture design | AD |
+| Frontend Agent | Frontend implementation | FI |
+| Backend Agent | Backend implementation | BI |
+| Tester Agent | Quality assurance | QEP |
+| Reviewer Agent | Delivery governance | DRR |
+
+## Artifact Lifecycle
+
+```
+Draft → Ready → Approved → In Progress → Completed → Verified → Released → Archived
+```
+
+## Framework Root
+
+The framework lives in `agent-sdd/` (default: `agent-sdd/`).
+
+- `AGENTS.MD` — Full framework specification
+- `INDEX.md` — Framework index
+- `loop/` — Software Delivery Loop stage definitions
+- `agents/` — Agent role definitions
+- `workflows/` — Workflow specifications
+- `artifacts/` — Artifact instances
+- `schemas/` — JSON Schema contracts for all artifact types
+- `templates/` — Markdown templates for every artifact type
+
+## Working with Agent SDD
+
+1. Always reference the framework root when creating or validating artifacts.
+2. Every artifact must have a unique ID, owner, version, and status.
+3. Never modify another agent's artifacts directly — use feedback instead.
+4. Before writing any code, ensure the relevant artifact is in **Approved** status.
+5. Use templates from `agent-sdd/templates/` when creating new artifacts.
+6. Validate artifacts against schemas in `agent-sdd/schemas/`.

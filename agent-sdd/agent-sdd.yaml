@@ -1,0 +1,88 @@
+# Agent SDD Configuration
+#
+# This file configures the Agent SDD runtime behavior.
+
+version: "1.0"
+
+# Framework root directory (relative to project root)
+framework_dir: agent-sdd
+
+# Cursor IDE integration
+cursor: true
+  enabled: true
+  rules_dir: .cursor/rules
+  # Execution rule is mandatory
+  require_execution_rule: true
+
+# Runtime behavior
+runtime:
+  # Path to runtime state file (relative to framework_dir)
+  state_file: runtime-state.json
+
+  # Path to command protocol (relative to framework_dir)
+  command_protocol: commands/sdd-command-protocol.md
+
+  # Enable strict mode (block on gate failures)
+  strict_mode: true
+
+  # Auto-advance stages (requires all gates to pass)
+  auto_advance: false
+
+# Validation settings
+validation:
+  # Run validation on artifact save
+  on_save: true
+
+  # Run validation before stage transition
+  on_transition: true
+
+  # Required schema validation for commits
+  require_for_commit: false
+
+  # CI integration
+  ci:
+    enabled: true
+    script: scripts/agent-sdd-validate.sh
+
+# Quality gates
+gates:
+  # Require human-in-the-loop approval at these stages
+  hitl_required:
+    - 01-requirement  # Requirement approval
+    - 03-testing      # Testing results review
+    - 04-release      # Production release
+
+  # Stages that can auto-advance if gates pass
+  auto_gate:
+    - 02-development
+
+# Artifact paths (relative to framework_dir)
+artifacts:
+  dir: artifacts
+  schemas_dir: schemas
+  templates_dir: templates
+
+# Loop configuration
+loop:
+  # Entry point stage
+  entry_stage: 01-requirement
+
+  # Final stage (triggers delivery package)
+  final_stage: 04-release
+
+  # Feedback target (default: restart at requirement)
+  feedback_target: 01-requirement
+
+# Audit logging
+audit:
+  # Log all state changes
+  log_state_changes: true
+
+  # Log all artifact operations
+  log_artifacts: true
+
+  # Log gate evaluations
+  log_gates: true
+
+  # Retain audit entries for N days (0 = forever)
+  retention_days: 0

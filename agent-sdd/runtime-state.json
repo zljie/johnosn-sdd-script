@@ -1,0 +1,49 @@
+{
+  "_schema": "agent-sdd/runtime-state.schema.json",
+  "_version": "1.0.0",
+
+  "meta": {
+    "loop_id": "LOOP-001",
+    "loop_count": 1,
+    "created_at": null,
+    "updated_at": null,
+    "started_by": null
+  },
+
+  "current": {
+    "loop_stage": null,
+    "agent_role": null,
+    "workflow": null,
+    "artifact_id": null,
+    "artifact_status": null
+  },
+
+  "artifacts": {
+    "required": [],
+    "produced": [],
+    "approved": []
+  },
+
+  "gates": {
+    "current_gate": null,
+    "last_gate_result": null,
+    "last_gate_timestamp": null,
+    "gate_history": []
+  },
+
+  "approvals": {
+    "required": true,
+    "pending": [],
+    "completed": []
+  },
+
+  "traceability": {
+    "parent_loop": null,
+    "parent_artifact": null,
+    "children_artifacts": []
+  },
+
+  "status": "initialized",
+
+  "audit_log": []
+}

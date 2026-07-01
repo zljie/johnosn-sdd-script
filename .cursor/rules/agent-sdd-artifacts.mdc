@@ -1,0 +1,69 @@
+---
+description: Agent SDD Artifact system — types, schemas, and templates
+version: 1.0
+---
+
+# Agent SDD Artifact System
+
+## Artifact Types
+
+Every artifact in the Agent SDD framework follows a standardized format with YAML frontmatter.
+
+| Artifact | ID Pattern | Schema |
+|----------|-----------|--------|
+| Requirement | REQ-### | requirement.schema.yaml |
+| Product Specification | PS-### | product-specification.schema.yaml |
+| Technical Specification | TS-### | technical-specification.schema.yaml |
+| Architecture Design | AD-### | architecture-design.schema.yaml |
+| User Story | US-### | user-story.schema.yaml |
+| Task | TASK-### | task.schema.yaml |
+| Backend Implementation | BI-### | (informal) |
+| Frontend Implementation | FI-### | (informal) |
+| Test Case | TC-### | test-case.schema.yaml |
+| Test Report | TR-### | test-report.schema.yaml |
+| Bug Report | BUG-### | (informal) |
+| Data Model | MODEL-### | data-model.schema.yaml |
+| API | API-### | api.schema.yaml |
+| Quality Evidence Package | QEP-### | quality-evidence-package.schema.yaml |
+| Delivery Review Report | DRR-### | delivery-review-report.schema.yaml |
+| Software Delivery Package | SDP-### | software-delivery-package.schema.yaml |
+
+## Artifact Frontmatter
+
+Every artifact file must start with YAML frontmatter:
+
+```yaml
+---
+id: REQ-001
+title: User Authentication
+owner: requirement-agent
+version: 1.0.0
+status: Approved
+traceability:
+  parent: null
+  children:
+    - PS-001
+    - US-001
+metadata:
+  createdAt: 2024-01-01
+  updatedAt: 2024-01-15
+  loopStage: 01-requirement
+---
+```
+
+## Templates
+
+Use the matching template from `agent-sdd/templates/` when creating new artifacts.
+
+## Schemas
+
+Validate artifacts against the JSON Schema in `agent-sdd/schemas/`.
+
+## Artifact File Naming
+
+Save artifacts as: `{artifact-id}-{slug}.md`
+
+Examples:
+- `REQ-001-user-authentication.md`
+- `PS-001-ecommerce-product.md`
+- `TS-003-payment-service.md`
