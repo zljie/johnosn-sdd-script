@@ -3,7 +3,7 @@
 # agent-sdd-init.sh — Bootstrap Agent SDD into a new or existing project.
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-init.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-init.sh | bash -s -- --cursor --spec-kit
 #   ./agent-sdd-init.sh                     # interactive
 #   ./agent-sdd-init.sh --force             # non-interactive, overwrite without prompting
 #   ./agent-sdd-init.sh --no-ci             # skip CI workflow prompt
@@ -406,7 +406,7 @@ if [ "$ADD_CURSOR" = true ]; then
     else
         warn "Cursor script not found at '$CURSOR_SCRIPT'."
         warn "To install Cursor rules via curl, run:"
-        warn "  curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-cursor-init.sh | bash -- --dir $FRAMEWORK_DIR${ADD_SPEC_KIT:+" --spec-kit"}"
+        warn "  curl -sSL https://raw.githubusercontent.com/zljie/johnosn-sdd-script/main/scripts/agent-sdd-cursor-init.sh | bash -s -- --dir $FRAMEWORK_DIR${ADD_SPEC_KIT:+" --spec-kit"}"
     fi
 fi
 
